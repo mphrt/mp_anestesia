@@ -124,7 +124,9 @@ def main():
         add_section("6. Seguridad Eléctrica", seguridad)
 
         pdf.ln(5)
+        pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 8, "Instrumentos de Análisis:", ln=True)
+        pdf.set_font("Arial", "", 10)
         for e, m, mo, s in [(equipo1, marca1, modelo1, serie1), (equipo2, marca2, modelo2, serie2)]:
             pdf.cell(0, 6, f"Equipo: {e} | Marca: {m} | Modelo: {mo} | N° Serie: {s}", ln=True)
 
@@ -137,12 +139,21 @@ def main():
         pdf.cell(0, 8, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 8, f"Empresa Responsable: {empresa}", ln=True)
 
-        # Guardar en memoria
+        pdf.ln(20)
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(60, 8, "_________________________", 0, 0, 'C')
+        pdf.cell(60, 8, "_________________________", 0, 0, 'C')
+        pdf.cell(60, 8, "_________________________", 0, 1, 'C')
+
+        pdf.cell(60, 6, "TÉCNICO ENCARGADO", 0, 0, 'C')
+        pdf.cell(60, 6, "INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.cell(60, 6, "PERSONAL CLÍNICO", 0, 1, 'C')
+
         pdf_bytes = pdf.output(dest='S').encode('latin1')
-        pdf_buffer = io.BytesIO(pdf_bytes)
+        buffer = io.BytesIO(pdf_bytes)
 
         st.success("PDF generado con éxito.")
-        st.download_button("Descargar PDF", pdf_buffer, file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", buffer, file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
