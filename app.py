@@ -1,6 +1,7 @@
 import streamlit as st
 from fpdf import FPDF
 import datetime
+import io
 
 def show_radio_section(title, items, description=None):
     st.markdown(f"### {title}")
@@ -136,12 +137,12 @@ def main():
         pdf.cell(0, 8, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 8, f"Empresa Responsable: {empresa}", ln=True)
 
-        filename = f"/mnt/data/MP_Anestesia_{sn.replace(' ', '_')}.pdf"
-        pdf.output(filename)
+        # Guardar en memoria
+        pdf_bytes = pdf.output(dest='S').encode('latin1')
+        pdf_buffer = io.BytesIO(pdf_bytes)
 
-        with open(filename, "rb") as f:
-            st.success("PDF generado con éxito.")
-            st.download_button("Descargar PDF", f, file_name=filename.split("/")[-1], mime="application/pdf")
+        st.success("PDF generado con éxito.")
+        st.download_button("Descargar PDF", pdf_buffer, file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
