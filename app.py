@@ -213,24 +213,26 @@ def main():
                 
                 img_byte_arr = io.BytesIO()
                 img.save(img_byte_arr, format='PNG')
-                img_byte_arr.seek(0)
+                # IMPORTANT: Reset the stream position to the beginning after writing!
+                img_byte_arr.seek(0) 
 
                 # Add image to PDF. Adjust width and height as needed.
-                # The 'w' and 'h' parameters are in PDF units (mm).
-                # The 'x' and 'y' parameters can be omitted to place it at current cursor.
-                # Let's aim for a consistent size for signatures.
-                # Calculate aspect ratio to maintain proportions
                 img_width_mm = 60 # Desired width in mm
                 img_height_mm = (img.height / img.width) * img_width_mm
                 
-                # Ensure it doesn't exceed a max height if drawing is too tall
                 max_signature_height = 25
                 if img_height_mm > max_signature_height:
                     img_height_mm = max_signature_height
                     img_width_mm = (img.width / img.height) * img_height_mm
 
-
-                pdf_obj.image(img_byte_arr, x=pdf_obj.get_x(), y=pdf_obj.get_y(), w=img_width_mm, h=img_height_mm)
+                # fpdf's image method for byte streams should take the stream itself and format
+                # The 'type' parameter hints fpdf about the image format.
+                try:
+                    pdf_obj.image(img_byte_arr, x=pdf_obj.get_x(), y=pdf_obj.get_y(), w=img_width_mm, h=img_height_mm, type='PNG')
+                except Exception as e:
+                    st.warning(f"Error al añadir la firma de {label} al PDF: {e}")
+                    pdf_obj.set_font("Arial", "I", 10)
+                    pdf_obj.cell(0, 7, f"Error al cargar firma de {label}", ln=True)
             else:
                 pdf_obj.set_font("Arial", "I", 10)
                 pdf_obj.cell(0, 7, "No se proporcionó firma", ln=True)
