@@ -29,11 +29,23 @@ def create_checkbox_table(pdf, section_title, items):
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
         img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
+        
         if img.mode == 'RGBA':
-            img = img.convert('RGB')
+            # Get the bounding box of the non-transparent pixels
+            bbox = img.getbbox()
+            if bbox:
+                img = img.crop(bbox) # Crop the image to the bounding box
+            else:
+                # If bbox is None, it means the image is completely transparent,
+                # or there's no drawing. In this case, we might skip adding it
+                # or add a placeholder. For now, we'll just not add it.
+                return 
+            img = img.convert('RGB') # Convert to RGB after cropping if it was RGBA
+
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
             tmp_file.write(img_byte_arr.read())
             tmp_path = tmp_file.name
@@ -160,7 +172,13 @@ def main():
     if st.button("Generar PDF"):
         pdf = FPDF()
         pdf.add_page()
-        pdf.image("logo_hrt_final.jpg", x=10, y=6, w=45)
+        # You'll need to make sure 'logo_hrt_final.jpg' is in the same directory as your script
+        # or provide a full path to it.
+        try:
+            pdf.image("logo_hrt_final.jpg", x=10, y=6, w=45)
+        except Exception as e:
+            st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
+
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 10, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
         pdf.set_font("Arial", "", 10)
@@ -197,9 +215,10 @@ def main():
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
 
         pdf.add_page()
-        # Define the x positions for the start of each signature area (approximate center of where each signature input box was)
+        # Define the x positions for the start of each signature area (approximate left edge of where each signature should be)
         # These values are chosen to distribute the signatures across the page width.
-        x_positions_for_signature_area = [20, 80, 140] # Adjusted these to spread them out a bit more
+        # Each signature area is assumed to be 60mm wide for centering.
+        x_positions_for_signature_area = [20, 80, 140] 
         y_firma = 60 # Y position for the top of the signature image
         
         # Add signatures
@@ -213,9 +232,9 @@ def main():
         # Add signature lines and labels, centered within a 60mm width for each
         for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
             pdf.set_xy(x_positions_for_signature_area[i], pdf.get_y()) # Set current position to the start of each signature area
-            pdf.cell(60, 6, "_________________________", 0, 2, 'C') # Centered line
-            pdf.cell(60, 6, label, 0, 0, 'C') # Centered label
-        
+            pdf.cell(60, 6, "_________________________", 0, 2, 'C') # Centered line, move to next line
+            pdf.cell(60, 6, label, 0, 0, 'C') # Centered label, stay on same line
+
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
