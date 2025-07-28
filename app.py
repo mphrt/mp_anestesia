@@ -1,9 +1,8 @@
 import streamlit as st
-from fpdf import FPDF  # Usamos fpdf clásico (v1.7.2)
+from fpdf import FPDF
 import datetime
 import io
 import base64
-import tempfile
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
@@ -117,44 +116,44 @@ def main():
 
     st.subheader("Firmas")
 
-    canvas_result_tecnico = st_canvas("Firma de Técnico Encargado", fill_color="rgba(255,165,0,0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
-    canvas_result_ingenieria = st_canvas("Firma de Ingeniería Clínica", fill_color="rgba(255,165,0,0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_ingenieria")
-    canvas_result_clinico = st_canvas("Firma de Personal Clínico", fill_color="rgba(255,165,0,0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_clinico")
+    # Signature for Técnico Encargado
+    st.write("Firma de Técnico Encargado:")
+    canvas_result_tecnico = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)",  # Orange for fill color
+        stroke_width=2,
+        stroke_color="#000000",  # Black stroke
+        background_color="#EEEEEE", # Light grey background
+        height=150,
+        width=300,
+        drawing_mode="freedraw",
+        key="canvas_tecnico",
+    )
 
-    def add_signature_to_pdf(pdf_obj, canvas_result, label):
-        pdf_obj.set_font("Arial", "B", 10)
-        pdf_obj.cell(0, 7, f"FIRMA {label.upper()}:", ln=True)
-        pdf_obj.set_font("Arial", "", 10)
+    # Signature for Ingeniería Clínica
+    st.write("Firma de Ingeniería Clínica:")
+    canvas_result_ingenieria = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)",
+        stroke_width=2,
+        stroke_color="#000000",
+        background_color="#EEEEEE",
+        height=150,
+        width=300,
+        drawing_mode="freedraw",
+        key="canvas_ingenieria",
+    )
 
-        if canvas_result.image_data is not None:
-            img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
-            if img.mode == 'RGBA':
-                img = img.convert('RGB')
-            img_byte_arr = io.BytesIO()
-            img.save(img_byte_arr, format='PNG')
-            img_byte_arr.seek(0)
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
-                tmp_file.write(img_byte_arr.read())
-                tmp_path = tmp_file.name
-
-            img_width_mm = 60
-            img_height_mm = (img.height / img.width) * img_width_mm
-            max_height = 25
-            if img_height_mm > max_height:
-                img_height_mm = max_height
-                img_width_mm = (img.width / img.height) * img_height_mm
-
-            try:
-                pdf_obj.image(tmp_path, x=pdf_obj.get_x(), y=pdf_obj.get_y(), w=img_width_mm, h=img_height_mm)
-            except Exception as e:
-                st.warning(f"Error al añadir la firma de {label} al PDF: {e}")
-                pdf_obj.set_font("Arial", "I", 10)
-                pdf_obj.cell(0, 7, f"Error al cargar firma de {label}", ln=True)
-        else:
-            pdf_obj.set_font("Arial", "I", 10)
-            pdf_obj.cell(0, 7, "No se proporcionó firma", ln=True)
-        pdf_obj.ln(10)
+    # Signature for Personal Clínico
+    st.write("Firma de Personal Clínico:")
+    canvas_result_clinico = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)",
+        stroke_width=2,
+        stroke_color="#000000",
+        background_color="#EEEEEE",
+        height=150,
+        width=300,
+        drawing_mode="freedraw",
+        key="canvas_clinico",
+    )
 
     if st.button("Generar PDF"):
         pdf = FPDF()
@@ -167,6 +166,7 @@ def main():
         pdf.cell(0, 10, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)", ln=True, align="C")
         pdf.ln(5)
 
+        pdf.set_font("Arial", "", 10)
         for label, val in [
             ("MARCA", marca), ("MODELO", modelo), ("S/N", sn),
             ("N° INVENTARIO", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%Y-%m-%d"))
@@ -196,13 +196,57 @@ def main():
         pdf.cell(0, 7, f"Equipo Operativo: {operativo}", ln=True)
         pdf.cell(0, 7, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
+
         pdf.ln(15)
 
+        # Function to add signature to PDF
+        def add_signature_to_pdf(pdf_obj, canvas_result, label):
+            pdf_obj.set_font("Arial", "B", 10)
+            pdf_obj.cell(0, 7, f"FIRMA {label.upper()}:", ln=True)
+            pdf_obj.set_font("Arial", "", 10)
+
+            if canvas_result.image_data is not None:
+                # Convert RGBA to RGB (fpdf doesn't like RGBA directly)
+                img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
+                if img.mode == 'RGBA':
+                    img = img.convert('RGB')
+                
+                img_byte_arr = io.BytesIO()
+                img.save(img_byte_arr, format='PNG')
+                img_byte_arr.seek(0) # IMPORTANT: Reset the stream position to the beginning!
+
+                # Get the raw bytes from the BytesIO object
+                image_data_bytes = img_byte_arr.read() 
+
+                # Add image to PDF using the 'data' parameter for raw bytes
+                img_width_mm = 60 # Desired width in mm
+                img_height_mm = (img.height / img.width) * img_width_mm
+                
+                max_signature_height = 25
+                if img_height_mm > max_signature_height:
+                    img_height_mm = max_signature_height
+                    img_width_mm = (img.width / img.height) * img_height_mm
+
+                try:
+                    # Pass the raw bytes to the 'data' parameter
+                    pdf_obj.image(name='', x=pdf_obj.get_x(), y=pdf_obj.get_y(), w=img_width_mm, h=img_height_mm, type='PNG', data=image_data_bytes)
+                except Exception as e:
+                    st.warning(f"Error al añadir la firma de {label} al PDF: {e}")
+                    pdf_obj.set_font("Arial", "I", 10)
+                    pdf_obj.cell(0, 7, f"Error al cargar firma de {label}", ln=True)
+            else:
+                pdf_obj.set_font("Arial", "I", 10)
+                pdf_obj.cell(0, 7, "No se proporcionó firma", ln=True)
+
+            pdf_obj.ln(10) # Space after each signature area
+
+        # Add signatures to PDF
         add_signature_to_pdf(pdf, canvas_result_tecnico, "TÉCNICO ENCARGADO")
         add_signature_to_pdf(pdf, canvas_result_ingenieria, "INGENIERÍA CLÍNICA")
         add_signature_to_pdf(pdf, canvas_result_clinico, "PERSONAL CLÍNICO")
 
-        pdf.ln(10)
+        # Original lines for text placeholders (now after image signatures)
+        pdf.ln(10) # Add some space before the final lines
         pdf.cell(60, 8, "_________________________", 0, 0, 'C')
         pdf.cell(60, 8, "_________________________", 0, 0, 'C')
         pdf.cell(60, 8, "_________________________", 0, 1, 'C')
@@ -210,9 +254,9 @@ def main():
         pdf.cell(60, 6, "INGENIERÍA CLÍNICA", 0, 0, 'C')
         pdf.cell(60, 6, "PERSONAL CLÍNICO", 0, 1, 'C')
 
-        output = io.BytesIO()
-        pdf.output(output)
-        st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
+
+        output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
+        st.download_button("Descargar PDF", output, file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
