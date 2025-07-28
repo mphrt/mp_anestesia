@@ -9,8 +9,6 @@ import numpy as np
 from PIL import Image
 
 def create_checkbox_table(pdf, section_title, items):
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", "B", 10)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 7, section_title, ln=True)
     pdf.set_font("Arial", "", 10)
@@ -199,24 +197,8 @@ def main():
         pdf.set_y(firma_y); pdf.set_x(x2); add_signature_to_pdf(pdf, canvas_result_ingenieria, "INGENIERÍA CLÍNICA")
         pdf.set_y(firma_y); pdf.set_x(x3); add_signature_to_pdf(pdf, canvas_result_clinico, "PERSONAL CLÍNICO")
 
-        # Tabla de firmas centradas
-        pdf.ln(10)
-        col_width = 60
-        spacing = 10
-        x_positions = [(210 - 3 * col_width - 2 * spacing) / 2 + i * (col_width + spacing) for i in range(3)]
-        firmas = [canvas_result_tecnico, canvas_result_ingenieria, canvas_result_clinico]
-        labels = ["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]
-
-        y_firma = pdf.get_y()
-        for i, (canvas, label) in enumerate(zip(firmas, labels)):
-            pdf.set_xy(x_positions[i], y_firma)
-            add_signature_to_pdf(pdf, canvas, label)
-
         pdf.set_y(pdf.get_y() + 25)
-        for i, label in enumerate(labels):
-            pdf.set_xy(x_positions[i], pdf.get_y())
-            pdf.cell(col_width, 8, "_________________________", 0, 2, 'C')
-            pdf.cell(col_width, 6, label, 0, 0, 'C')
+        pdf.set_x(x1); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
         pdf.set_x(x2); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
         pdf.set_x(x3); pdf.cell(60, 8, "_________________________", 0, 1, 'C')
         pdf.set_x(x1); pdf.cell(60, 6, "TÉCNICO ENCARGADO", 0, 0, 'C')
