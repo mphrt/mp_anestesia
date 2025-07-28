@@ -28,22 +28,38 @@ def create_checkbox_table(pdf, section_title, items):
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
-        img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
-        
-        if img.mode == 'RGBA':
-            # Get the bounding box of the non-transparent pixels
-            bbox = img.getbbox()
-            if bbox:
-                img = img.crop(bbox) # Crop the image to the bounding box
-            else:
-                # If bbox is None, it means the image is completely transparent,
-                # or there's no drawing. In this case, we might skip adding it
-                # or add a placeholder. For now, we'll just not add it.
-                return 
-            img = img.convert('RGB') # Convert to RGB after cropping if it was RGBA
+        img_array = canvas_result.image_data.astype(np.uint8)
+        img = Image.fromarray(img_array)
 
+        # Convert to grayscale for easier background detection
+        gray_img = img.convert('L')
+        
+        # Determine the background color's grayscale value. Since background_color="#EEEEEE" (light gray)
+        # We can assume anything close to this value is background.
+        # A simple threshold can separate the signature (darker) from the background.
+        # Let's say we consider anything darker than 230 (on a 0-255 scale) as part of the signature.
+        threshold = 230 
+        
+        # Get coordinates of all pixels that are darker than the threshold
+        coords = np.argwhere(np.array(gray_img) < threshold)
+        
+        if coords.size == 0:
+            # No significant drawing detected, skip adding the image
+            return
+        
+        # Find the bounding box of these pixels
+        min_y, min_x = coords.min(axis=0)
+        max_y, max_x = coords.max(axis=0)
+        
+        # Crop the image based on the detected bounding box
+        cropped_img = img.crop((min_x, min_y, max_x + 1, max_y + 1))
+        
+        # Convert to RGB if it's still RGBA after cropping (it should be fine if original was RGB or if we convert later)
+        if cropped_img.mode == 'RGBA':
+            cropped_img = cropped_img.convert('RGB')
+        
         img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='PNG')
+        cropped_img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
@@ -52,19 +68,18 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
         
         # Define a desired width for the signature image in PDF
         desired_img_width_mm = 50 
-        img_height_mm = (img.height / img.width) * desired_img_width_mm
+        # Calculate height based on the cropped image's aspect ratio
+        img_height_mm = (cropped_img.height / cropped_img.width) * desired_img_width_mm
         
         # Ensure signature doesn't exceed a max height
         max_height = 30
         if img_height_mm > max_height:
             img_height_mm = max_height
-            desired_img_width_mm = (img.width / img.height) * img_height_mm # Adjust width to maintain aspect ratio
+            # Adjust width to maintain aspect ratio with the new max height
+            desired_img_width_mm = (cropped_img.width / cropped_img.height) * img_height_mm 
 
         # Calculate x to center the image within a 60mm wide "signature box" area
-        # The x_start_of_box is where the "box" (or a conceptual center point) starts.
-        # We want to center the image relative to this x_start_of_box.
-        # Assuming each signature area is about 60mm wide for layout purposes.
-        center_of_area_x = x_start_of_box + (60 / 2)
+        center_of_area_x = x_start_of_box + (60 / 2) # 60mm is the conceptual width for each signature
         image_x = center_of_area_x - (desired_img_width_mm / 2)
         
         try:
@@ -215,24 +230,29 @@ def main():
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
 
         pdf.add_page()
-        # Define the x positions for the start of each signature area (approximate left edge of where each signature should be)
-        # These values are chosen to distribute the signatures across the page width.
-        # Each signature area is assumed to be 60mm wide for centering.
+        
+        # Define the x positions for the start of each signature area.
+        # These are the left-most points of where each signature's conceptual 60mm box starts.
         x_positions_for_signature_area = [20, 80, 140] 
-        y_firma = 60 # Y position for the top of the signature image
+        y_firma_image = 60 # Y position for the top of the signature image
         
         # Add signatures
-        add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma)
-        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma)
-        add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma)
+        add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
+        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
+        add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
 
         # Move down to place the lines and labels
-        pdf.set_y(y_firma + 30) # 30mm below the start of the image placement
-
+        # Assuming signature image can be up to 30mm tall, we place the line below that.
+        y_firma_text = y_firma_image + 30 
+        
         # Add signature lines and labels, centered within a 60mm width for each
         for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
-            pdf.set_xy(x_positions_for_signature_area[i], pdf.get_y()) # Set current position to the start of each signature area
-            pdf.cell(60, 6, "_________________________", 0, 2, 'C') # Centered line, move to next line
+            # Set the Y position for the current line of text
+            pdf.set_y(y_firma_text)
+            # Set X position to the start of the current signature area
+            pdf.set_x(x_positions_for_signature_area[i]) 
+            pdf.cell(60, 6, "_________________________", 0, 2, 'C') # Centered line, move to next line (within the 60mm cell)
+            pdf.set_x(x_positions_for_signature_area[i]) # Reset X for the label
             pdf.cell(60, 6, label, 0, 0, 'C') # Centered label, stay on same line
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
