@@ -1,3 +1,4 @@
+
 import streamlit as st
 from fpdf import FPDF
 import datetime
@@ -23,45 +24,33 @@ def create_checkbox_table(pdf, section_title, items):
     pdf.ln(3)
 
 def add_signature_to_pdf(pdf_obj, canvas_result, label):
-    pdf_obj.set_font("Arial", "B", 10)
-    pdf_obj.cell(0, 7, f"FIRMA {label.upper()}:", ln=True)
-    pdf_obj.set_font("Arial", "", 10)
-
     if canvas_result.image_data is not None:
         img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
         if img.mode == 'RGBA':
             img = img.convert('RGB')
-
         img_byte_arr = io.BytesIO()
         img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
             tmp_file.write(img_byte_arr.read())
             tmp_path = tmp_file.name
-
         img_width_mm = 60
         img_height_mm = (img.height / img.width) * img_width_mm
         max_height = 25
         if img_height_mm > max_height:
             img_height_mm = max_height
             img_width_mm = (img.width / img.height) * img_height_mm
-
         try:
             pdf_obj.image(tmp_path, x=pdf_obj.get_x(), y=pdf_obj.get_y(), w=img_width_mm, h=img_height_mm)
         except Exception as e:
-            st.warning(f"Error al añadir la firma de {label} al PDF: {e}")
             pdf_obj.set_font("Arial", "I", 10)
             pdf_obj.cell(0, 7, f"Error al cargar firma de {label}", ln=True)
     else:
         pdf_obj.set_font("Arial", "I", 10)
-        pdf_obj.cell(0, 7, "No se proporcionó firma", ln=True)
-
-    pdf_obj.ln(10)
+        pdf_obj.cell(0, 7, f"No se proporcionó firma: {label}", ln=True)
 
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
-
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
     sn = st.text_input("S/N")
@@ -150,27 +139,12 @@ def main():
     empresa = st.text_input("Empresa Responsable")
 
     st.subheader("Firmas")
-
     st.write("Firma de Técnico Encargado:")
-    canvas_result_tecnico = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
-        background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
-        key="canvas_tecnico"
-    )
-
+    canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
     st.write("Firma de Ingeniería Clínica:")
-    canvas_result_ingenieria = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
-        background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
-        key="canvas_ingenieria"
-    )
-
+    canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_ingenieria")
     st.write("Firma de Personal Clínico:")
-    canvas_result_clinico = st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
-        background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
-        key="canvas_clinico"
-    )
+    canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_clinico")
 
     if st.button("Generar PDF"):
         pdf = FPDF()
@@ -209,19 +183,22 @@ def main():
         pdf.cell(0, 7, f"Equipo Operativo: {operativo}", ln=True)
         pdf.cell(0, 7, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
-        pdf.ln(15)
-
-        add_signature_to_pdf(pdf, canvas_result_tecnico, "TÉCNICO ENCARGADO")
-        add_signature_to_pdf(pdf, canvas_result_ingenieria, "INGENIERÍA CLÍNICA")
-        add_signature_to_pdf(pdf, canvas_result_clinico, "PERSONAL CLÍNICO")
-
         pdf.ln(10)
-        pdf.cell(60, 8, "_________________________", 0, 0, 'C')
-        pdf.cell(60, 8, "_________________________", 0, 0, 'C')
-        pdf.cell(60, 8, "_________________________", 0, 1, 'C')
-        pdf.cell(60, 6, "TÉCNICO ENCARGADO", 0, 0, 'C')
-        pdf.cell(60, 6, "INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.cell(60, 6, "PERSONAL CLÍNICO", 0, 1, 'C')
+
+        # Inserta firmas alineadas sobre los nombres
+        firma_y = pdf.get_y()
+        x1, x2, x3 = 10, 75, 140
+        pdf.set_y(firma_y); pdf.set_x(x1); add_signature_to_pdf(pdf, canvas_result_tecnico, "TÉCNICO ENCARGADO")
+        pdf.set_y(firma_y); pdf.set_x(x2); add_signature_to_pdf(pdf, canvas_result_ingenieria, "INGENIERÍA CLÍNICA")
+        pdf.set_y(firma_y); pdf.set_x(x3); add_signature_to_pdf(pdf, canvas_result_clinico, "PERSONAL CLÍNICO")
+
+        pdf.set_y(pdf.get_y() + 25)
+        pdf.set_x(x1); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
+        pdf.set_x(x2); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
+        pdf.set_x(x3); pdf.cell(60, 8, "_________________________", 0, 1, 'C')
+        pdf.set_x(x1); pdf.cell(60, 6, "TÉCNICO ENCARGADO", 0, 0, 'C')
+        pdf.set_x(x2); pdf.cell(60, 6, "INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_x(x3); pdf.cell(60, 6, "PERSONAL CLÍNICO", 0, 1, 'C')
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
