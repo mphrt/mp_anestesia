@@ -1,3 +1,4 @@
+
 import streamlit as st
 from fpdf import FPDF
 import datetime
@@ -183,10 +184,11 @@ def main():
         pdf.cell(0, 7, f"Equipo Operativo: {operativo}", ln=True)
         pdf.cell(0, 7, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
-        pdf.ln(10)
+
+        pdf.add_page()
 
         x_positions = [20, 85, 150]
-        y_firma = pdf.get_y()
+        y_firma = 50
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions[0], y_firma)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions[1], y_firma)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions[2], y_firma)
