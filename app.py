@@ -1,4 +1,3 @@
-
 import streamlit as st
 from fpdf import FPDF
 import datetime
@@ -27,7 +26,7 @@ def create_checkbox_table(pdf, section_title, items):
         pdf.cell(15, 7, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(3)
 
-def add_signature_to_pdf(pdf_obj, canvas_result, x, y):
+def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
         img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
         if img.mode == 'RGBA':
@@ -38,16 +37,28 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x, y):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
             tmp_file.write(img_byte_arr.read())
             tmp_path = tmp_file.name
-        img_width_mm = 50
-        img_height_mm = (img.height / img.width) * img_width_mm
+        
+        # Define a desired width for the signature image in PDF
+        desired_img_width_mm = 50 
+        img_height_mm = (img.height / img.width) * desired_img_width_mm
+        
+        # Ensure signature doesn't exceed a max height
         max_height = 30
         if img_height_mm > max_height:
             img_height_mm = max_height
-            img_width_mm = (img.width / img.height) * img_height_mm
+            desired_img_width_mm = (img.width / img.height) * img_height_mm # Adjust width to maintain aspect ratio
+
+        # Calculate x to center the image within a 60mm wide "signature box" area
+        # The x_start_of_box is where the "box" (or a conceptual center point) starts.
+        # We want to center the image relative to this x_start_of_box.
+        # Assuming each signature area is about 60mm wide for layout purposes.
+        center_of_area_x = x_start_of_box + (60 / 2)
+        image_x = center_of_area_x - (desired_img_width_mm / 2)
+        
         try:
-            pdf_obj.image(tmp_path, x=x, y=y, w=img_width_mm, h=img_height_mm)
-        except:
-            pass
+            pdf_obj.image(tmp_path, x=image_x, y=y, w=desired_img_width_mm, h=img_height_mm)
+        except Exception as e:
+            st.error(f"Error al añadir imagen: {e}")
 
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -186,18 +197,25 @@ def main():
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
 
         pdf.add_page()
-        x_positions = [20, 85, 150]
-        y_firma = 60
-        add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions[0], y_firma)
-        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions[1], y_firma)
-        add_signature_to_pdf(pdf, canvas_result_clinico, x_positions[2], y_firma)
+        # Define the x positions for the start of each signature area (approximate center of where each signature input box was)
+        # These values are chosen to distribute the signatures across the page width.
+        x_positions_for_signature_area = [20, 80, 140] # Adjusted these to spread them out a bit more
+        y_firma = 60 # Y position for the top of the signature image
+        
+        # Add signatures
+        add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma)
+        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma)
+        add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma)
 
-        pdf.set_y(y_firma + 30)
+        # Move down to place the lines and labels
+        pdf.set_y(y_firma + 30) # 30mm below the start of the image placement
+
+        # Add signature lines and labels, centered within a 60mm width for each
         for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
-            pdf.set_xy(x_positions[i], pdf.get_y())
-            pdf.cell(60, 6, "_________________________", 0, 2, 'C')
-            pdf.cell(60, 6, label, 0, 0, 'C')
-
+            pdf.set_xy(x_positions_for_signature_area[i], pdf.get_y()) # Set current position to the start of each signature area
+            pdf.cell(60, 6, "_________________________", 0, 2, 'C') # Centered line
+            pdf.cell(60, 6, label, 0, 0, 'C') # Centered label
+        
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
