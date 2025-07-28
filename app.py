@@ -149,6 +149,11 @@ def main():
     if st.button("Generar PDF"):
         pdf = FPDF()
         pdf.add_page()
+        try:
+            pdf.image("logo_hrt_final.jpg", x=10, y=8, w=33)
+        except Exception as e:
+            pdf.set_font("Arial", "I", 8)
+            pdf.cell(0, 5, "Error al cargar logo: " + str(e), ln=True)
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 10, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
         pdf.set_font("Arial", "", 10)
