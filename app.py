@@ -1,3 +1,4 @@
+
 import streamlit as st
 from fpdf import FPDF
 import datetime
@@ -158,15 +159,27 @@ def main():
         pdf.set_font("Arial", "", 10)
         pdf.cell(0, 8, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="C")
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 10, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
+        pdf.cell(0, 10, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)", ln=True, align="C")
         pdf.ln(5)
 
         for label, val in [("MARCA", marca), ("MODELO", modelo), ("S/N", sn), ("N° INVENTARIO", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%d/%m/%Y"))]:
             pdf.cell(0, 7, f"{label}: {val}", ln=True)
         pdf.ln(5)
 
+        # Modificación del comportamiento de la tabla y títulos
+pdf.set_auto_page_break(auto=True, margin=15)
+
         for title, data in [
             ("1. Chequeo Visual", chequeo_visual),
+            ("2. Sistema de Alta Presión", sistema_alta),
+            ("3. Sistema de Baja Presión", sistema_baja),
+            ("4. Sistema absorbedor", sistema_absorbedor),
+            ("5. Ventilador mecánico", ventilador_mecanico),
+            ("6. Seguridad eléctrica", seguridad_electrica)
+        ]:
+            pdf.set_font("Arial", "B", 10)
+            pdf.cell(0, 7, title, ln=True)
+            create_checkbox_table(pdf, "", data)
             ("2. Sistema de Alta Presión", sistema_alta),
             ("3. Sistema de Baja Presión", sistema_baja),
             ("4. Sistema absorbedor", sistema_absorbedor),
@@ -196,8 +209,24 @@ def main():
         pdf.set_y(firma_y); pdf.set_x(x2); add_signature_to_pdf(pdf, canvas_result_ingenieria, "INGENIERÍA CLÍNICA")
         pdf.set_y(firma_y); pdf.set_x(x3); add_signature_to_pdf(pdf, canvas_result_clinico, "PERSONAL CLÍNICO")
 
+        # Tabla de firmas centradas con títulos correspondientes
+        pdf.ln(10)
+        col_width = 60
+        spacing = 10
+        x_positions = [(210 - 3 * col_width - 2 * spacing) / 2 + i * (col_width + spacing) for i in range(3)]
+        firmas = [canvas_result_tecnico, canvas_result_ingenieria, canvas_result_clinico]
+        labels = ["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]
+
+        y_firma = pdf.get_y()
+        for i, (canvas, label) in enumerate(zip(firmas, labels)):
+            pdf.set_xy(x_positions[i], y_firma)
+            add_signature_to_pdf(pdf, canvas, label)
+
         pdf.set_y(pdf.get_y() + 25)
-        pdf.set_x(x1); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
+        for i, label in enumerate(labels):
+            pdf.set_xy(x_positions[i], pdf.get_y())
+            pdf.cell(col_width, 8, "_________________________", 0, 2, 'C')
+            pdf.cell(col_width, 6, label, 0, 0, 'C')
         pdf.set_x(x2); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
         pdf.set_x(x3); pdf.cell(60, 8, "_________________________", 0, 1, 'C')
         pdf.set_x(x1); pdf.cell(60, 6, "TÉCNICO ENCARGADO", 0, 0, 'C')
