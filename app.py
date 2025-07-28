@@ -1,4 +1,3 @@
-
 import streamlit as st
 from fpdf import FPDF
 import datetime
@@ -9,26 +8,25 @@ import numpy as np
 from PIL import Image
 
 def create_checkbox_table(pdf, section_title, items):
-    pdf.set_auto_page_break(auto=True, margin=15)
+    if pdf.get_y() > 260:
+        pdf.add_page()
     pdf.set_font("Arial", "B", 10)
-    y_before = pdf.get_y()
-    pdf.multi_cell(0, 7, section_title)
-    y_after = pdf.get_y()
-    if y_after - y_before > 7:
-        pdf.ln(0)
+    pdf.cell(0, 7, section_title, ln=True)
     pdf.set_font("Arial", "", 10)
     pdf.cell(140, 7, "", 0)
     pdf.cell(15, 7, "OK", 1, 0, "C")
     pdf.cell(15, 7, "NO", 1, 0, "C")
     pdf.cell(15, 7, "N/A", 1, 1, "C")
     for item, value in items:
+        if pdf.get_y() > 270:
+            pdf.add_page()
         pdf.cell(140, 7, item, 1)
         pdf.cell(15, 7, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(15, 7, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(15, 7, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(3)
 
-def insert_signature(pdf, canvas_result, x, y):
+def add_signature_to_pdf(pdf_obj, canvas_result, x, y):
     if canvas_result.image_data is not None:
         img = Image.fromarray(canvas_result.image_data.astype(np.uint8))
         if img.mode == 'RGBA':
@@ -41,11 +39,14 @@ def insert_signature(pdf, canvas_result, x, y):
             tmp_path = tmp_file.name
         img_width_mm = 50
         img_height_mm = (img.height / img.width) * img_width_mm
-        max_height = 25
+        max_height = 30
         if img_height_mm > max_height:
             img_height_mm = max_height
             img_width_mm = (img.width / img.height) * img_height_mm
-        pdf.image(tmp_path, x=x, y=y, w=img_width_mm, h=img_height_mm)
+        try:
+            pdf_obj.image(tmp_path, x=x, y=y, w=img_width_mm, h=img_height_mm)
+        except:
+            pass
 
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -137,19 +138,23 @@ def main():
     empresa = st.text_input("Empresa Responsable")
 
     st.subheader("Firmas")
-    canvas_result_tecnico = st_canvas(height=120, width=200, drawing_mode="freedraw", key="canvas_tecnico")
-    canvas_result_ingenieria = st_canvas(height=120, width=200, drawing_mode="freedraw", key="canvas_ingenieria")
-    canvas_result_clinico = st_canvas(height=120, width=200, drawing_mode="freedraw", key="canvas_clinico")
+    st.write("Firma de Técnico Encargado:")
+    canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
+    st.write("Firma de Ingeniería Clínica:")
+    canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_ingenieria")
+    st.write("Firma de Personal Clínico:")
+    canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_clinico")
 
     if st.button("Generar PDF"):
         pdf = FPDF()
         pdf.add_page()
+        pdf.image("logo_hrt_final.jpg", x=10, y=6, w=45)
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 10, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
         pdf.set_font("Arial", "", 10)
         pdf.cell(0, 8, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="C")
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 10, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
+        pdf.cell(0, 10, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)", ln=True, align="C")
         pdf.ln(5)
 
         for label, val in [("MARCA", marca), ("MODELO", modelo), ("S/N", sn), ("N° INVENTARIO", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%d/%m/%Y"))]:
@@ -180,18 +185,17 @@ def main():
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
         pdf.ln(10)
 
-        firma_y = pdf.get_y()
-        insert_signature(pdf, canvas_result_tecnico, x=20, y=firma_y)
-        insert_signature(pdf, canvas_result_ingenieria, x=80, y=firma_y)
-        insert_signature(pdf, canvas_result_clinico, x=140, y=firma_y)
+        x_positions = [20, 85, 150]
+        y_firma = pdf.get_y()
+        add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions[0], y_firma)
+        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions[1], y_firma)
+        add_signature_to_pdf(pdf, canvas_result_clinico, x_positions[2], y_firma)
 
-        pdf.set_y(firma_y + 25)
-        pdf.set_x(20); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
-        pdf.set_x(80); pdf.cell(60, 8, "_________________________", 0, 0, 'C')
-        pdf.set_x(140); pdf.cell(60, 8, "_________________________", 0, 1, 'C')
-        pdf.set_x(20); pdf.cell(60, 6, "TÉCNICO ENCARGADO", 0, 0, 'C')
-        pdf.set_x(80); pdf.cell(60, 6, "INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_x(140); pdf.cell(60, 6, "PERSONAL CLÍNICO", 0, 1, 'C')
+        pdf.set_y(y_firma + 30)
+        for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
+            pdf.set_xy(x_positions[i], pdf.get_y())
+            pdf.cell(60, 6, "_________________________", 0, 2, 'C')
+            pdf.cell(60, 6, label, 0, 0, 'C')
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
