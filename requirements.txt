@@ -1,5 +1,5 @@
 streamlit
-fpdf2==1.7.2
+fpdf==1.7.2
 streamlit-drawable-canvas
 pillow
 numpy
