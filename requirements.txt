@@ -1,5 +1,5 @@
-fpdf2
 streamlit
+fpdf2
 streamlit-drawable-canvas
-Pillow
+pillow
 numpy
