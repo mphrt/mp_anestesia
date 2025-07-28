@@ -186,9 +186,8 @@ def main():
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
 
         pdf.add_page()
-
         x_positions = [20, 85, 150]
-        y_firma = 50
+        y_firma = 60
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions[0], y_firma)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions[1], y_firma)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions[2], y_firma)
