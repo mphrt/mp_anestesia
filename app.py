@@ -2,7 +2,6 @@ import streamlit as st
 from fpdf import FPDF
 import datetime
 import io
-import base64
 import tempfile
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
@@ -102,7 +101,7 @@ def main():
         "3.3. Revisión y calibración de válvula de flujometro de Aire",
         "3.4. Chequeo de fugas",
         "3.5. Verificación de flujos",
-        "3.6. Verificación de regulador de 2da (segunda) etapa",
+        "3.6. Verificación de regulador de 2da etapa",
         "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
         "3.8. Revisión de sistema proporción de O2/N2O",
         "3.9. Revisión de manifold de vaporizadores"
@@ -111,7 +110,7 @@ def main():
     sistema_absorbedor = checklist("4. Sistema absorbedor", [
         "4.1. Revisión o reemplazo de empaquetadura de canister",
         "4.2. Revisión de válvula APL",
-        "4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)",
+        "4.3. Verificación de manómetro de presión de vía aérea",
         "4.4. Revisión de válvula inhalatoria",
         "4.5. Revisión de válvula exhalatoria",
         "4.6. Chequeo de fugas",
@@ -140,12 +139,10 @@ def main():
     marca1 = st.text_input("Marca 1")
     modelo1 = st.text_input("Modelo 1")
     serie1 = st.text_input("N° Serie 1")
-
     eq2 = st.text_input("Equipo 2")
     marca2 = st.text_input("Marca 2")
     modelo2 = st.text_input("Modelo 2")
     serie2 = st.text_input("N° Serie 2")
-
     observaciones = st.text_area("Observaciones")
     observaciones_interno = st.text_area("Observaciones (uso interno)")
     operativo = st.radio("¿Equipo operativo?", ["SI", "NO"])
@@ -153,9 +150,27 @@ def main():
     empresa = st.text_input("Empresa Responsable")
 
     st.subheader("Firmas")
-    canvas_result_tecnico = st_canvas("Firma de Técnico Encargado", fill_color="rgba(255,165,0,0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
-    canvas_result_ingenieria = st_canvas("Firma de Ingeniería Clínica", fill_color="rgba(255,165,0,0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_ingenieria")
-    canvas_result_clinico = st_canvas("Firma de Personal Clínico", fill_color="rgba(255,165,0,0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_clinico")
+
+    st.write("Firma de Técnico Encargado:")
+    canvas_result_tecnico = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+        background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
+        key="canvas_tecnico"
+    )
+
+    st.write("Firma de Ingeniería Clínica:")
+    canvas_result_ingenieria = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+        background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
+        key="canvas_ingenieria"
+    )
+
+    st.write("Firma de Personal Clínico:")
+    canvas_result_clinico = st_canvas(
+        fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+        background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
+        key="canvas_clinico"
+    )
 
     if st.button("Generar PDF"):
         pdf = FPDF()
@@ -209,7 +224,7 @@ def main():
         pdf.cell(60, 6, "PERSONAL CLÍNICO", 0, 1, 'C')
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
-        st.download_button("Descargar PDF", output, file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
+        st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
     main()
