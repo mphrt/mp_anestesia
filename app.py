@@ -243,7 +243,7 @@ def main():
 
         # Move down to place the lines and labels
         # Assuming signature image can be up to 30mm tall, we place the line below that.
-        y_firma_text = y_firma_image + 20 
+        y_firma_text = y_firma_image + 30 
         
         # Add signature lines and labels, centered within a 60mm width for each
         for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
