@@ -3,4 +3,5 @@ fpdf2
 streamlit-drawable-canvas
 pillow
 numpy
+
 # Forzar reinstalación
