@@ -8,12 +8,10 @@ import numpy as np
 from PIL import Image
 
 def create_checkbox_table(pdf, section_title, items, x_pos):
-    # Se redujo el tamaño de la fuente para que quepa más contenido
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 7)
     pdf.cell(0, 4, section_title, ln=True, border=0)
     
-    # Encabezados de la tabla
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "", 6)
     pdf.cell(85, 3.5, "", 0)
@@ -21,7 +19,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
     pdf.cell(10, 3.5, "NO", 1, 0, "C")
     pdf.cell(10, 3.5, "N/A", 1, 1, "C")
     
-    # Contenido de la tabla
     pdf.set_font("Arial", "", 6)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -30,7 +27,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 3.5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
     
-    # Espacio después de la tabla para separar de la siguiente
     pdf.ln(2)
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
@@ -186,7 +182,6 @@ def main():
     st.subheader("Firmas")
     col_tecnico, col_ingenieria, col_clinico = st.columns(3)
 
-    # Se aumentó el tamaño de los lienzos para las firmas
     with col_tecnico:
         st.write("Técnico Encargado:")
         canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
@@ -203,28 +198,26 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
         
-        # --- Encabezado y títulos ---
         try:
-            # Se aumentó el ancho del logo de 30 a 40 mm
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=40)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
-        # Títulos centrados
+        # Títulos en la columna izquierda
         y_title_start = 6
         pdf.set_y(y_title_start)
+        pdf.set_x(55)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
+        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
+        pdf.set_x(55)
         pdf.set_font("Arial", "", 7)
-        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
+        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
+        pdf.set_x(55)
         pdf.set_font("Arial", "B", 8)
-        # Título principal alineado a la izquierda
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
-        # Añadido un salto de línea para bajar la sección de información del equipo
         pdf.ln(10)
 
-        # Secciones principales
         y_start_columns = pdf.get_y()
 
         # Columna Izquierda
@@ -246,18 +239,16 @@ def main():
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
         y_after_col1 = pdf.get_y()
 
         # Columna Derecha
-        # Se movió el margen de la columna derecha a 160 mm
         pdf.set_y(y_start_columns)
         
-        # Se movió el ítem 4 a la parte superior de la columna derecha
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=160)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
         
-        # --- Sección de Instrumentos de análisis (Columna Derecha) ---
+        # Sección de Instrumentos de análisis (Columna Derecha)
         pdf.set_x(160)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
@@ -287,7 +278,7 @@ def main():
         
         pdf.ln(2)
 
-        # --- Observaciones y firmas (Columna Derecha) ---
+        # Observaciones y firmas (Columna Derecha)
         pdf.set_x(160)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 3.5, "Observaciones:", ln=True)
@@ -307,7 +298,6 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Equipo Operativo: {operativo}", ln=True)
         
-        # Ahora se coloca "Empresa Responsable" debajo de "Nombre Técnico"
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 1)
         pdf.set_x(160)
@@ -315,13 +305,12 @@ def main():
 
         pdf.ln(5)
         
-        # Firmas (Se mantienen abajo para que no interfieran con las columnas)
+        # Firmas
         y_firma_start = max(y_after_col1, pdf.get_y())
         pdf.set_y(y_firma_start)
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
         
-        # Dibujar firmas
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
