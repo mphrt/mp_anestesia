@@ -211,14 +211,15 @@ def main():
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
         # Títulos centrados
-        y_title_start = 6 
+        y_title_start = 6
         pdf.set_y(y_title_start)
         pdf.set_font("Arial", "B", 9)
         pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
+        # Título principal alineado a la izquierda
+        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
         # Añadido un salto de línea para bajar la sección de información del equipo
         pdf.ln(10)
@@ -251,6 +252,7 @@ def main():
         # Se movió el margen de la columna derecha a 160 mm
         pdf.set_y(y_start_columns)
         
+        # Se movió el ítem 4 a la parte superior de la columna derecha
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=160)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
