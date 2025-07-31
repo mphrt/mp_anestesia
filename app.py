@@ -208,7 +208,7 @@ def main():
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
         # Títulos
-        y_title_start = 6 # Guardamos la posición vertical del primer título
+        y_title_start = 6
         pdf.set_y(y_title_start)
         pdf.set_font("Arial", "B", 10)
         pdf.set_x(45)
@@ -246,8 +246,7 @@ def main():
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         y_after_col1 = pdf.get_y()
 
-        # Columna Derecha (Se ajusta la posición vertical)
-        # La posición Y se establece al mismo valor que el inicio de los títulos principales
+        # Columna Derecha
         pdf.set_y(y_title_start)
         
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
@@ -303,8 +302,11 @@ def main():
         
         pdf.set_x(150)
         pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
+        
+        # MODIFICACIÓN: Se generan las celdas en líneas separadas para evitar solapamiento
         pdf.set_x(150)
-        pdf.cell(100, 4, f"Nombre Técnico: {tecnico}", 0, 0)
+        pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", ln=True)
+        
         pdf.set_x(150)
         pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
 
