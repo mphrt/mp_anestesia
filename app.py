@@ -217,9 +217,8 @@ def main():
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
         # Guardamos la posición Y para alinear las dos columnas
-        y_column_start = pdf.get_y()
-        pdf.ln(5)
-
+        y_column_start = pdf.get_y() + 5  # Añadimos un pequeño espacio para que no quede pegado
+        
         # --- COLUMNA IZQUIERDA ---
         pdf.set_y(y_column_start)
         pdf.set_x(10)
@@ -243,7 +242,7 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
         
         # --- COLUMNA DERECHA ---
-        # Nos movemos a la misma posición Y guardada antes para empezar la columna derecha a la par
+        # Nos movemos a la misma posición Y guardada antes para empezar la columna derecha
         pdf.set_y(y_column_start) 
         
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
