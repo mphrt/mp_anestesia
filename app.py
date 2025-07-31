@@ -216,11 +216,14 @@ def main():
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
-        # Guardamos la posición Y para alinear las dos columnas
-        y_column_start = pdf.get_y() + 5  # Un pequeño espacio para que no quede pegado
+        # Definimos la posición inicial de ambas columnas.
+        # Ahora el offset se aplica solo a la columna izquierda.
+        y_column_start_left = pdf.get_y() + 15
+        y_column_start_right = pdf.get_y() + 5
         
         # --- COLUMNA IZQUIERDA ---
-        pdf.set_y(y_column_start)
+        # Usamos el nuevo offset para bajar esta columna
+        pdf.set_y(y_column_start_left)
         pdf.set_x(10)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
@@ -242,8 +245,8 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
         
         # --- COLUMNA DERECHA ---
-        # Nos movemos a la misma posición Y guardada antes para empezar la columna derecha
-        pdf.set_y(y_column_start) 
+        # Mantenemos la posición de la columna derecha más alta
+        pdf.set_y(y_column_start_right) 
         
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
