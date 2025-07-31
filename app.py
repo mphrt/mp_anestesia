@@ -7,12 +7,12 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items, x_pos):
+def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
     """
-    Crea una tabla de chequeo en una posición x_pos específica.
-    Se ajustan los tamaños de las celdas para el formato horizontal.
+    Crea una tabla de chequeo en una posición x_pos y y_pos específica.
+    Se ajustan los tamaños de las celdas para el formato horizontal y compactar el contenido.
     """
-    pdf.set_x(x_pos)
+    pdf.set_xy(x_pos, y_pos)
     pdf.set_font("Arial", "B", 8)
     pdf.cell(0, 4, section_title, ln=True, align="L")
     pdf.set_x(x_pos)
@@ -34,7 +34,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
 def add_signature_to_pdf(pdf_obj, canvas_result, x, y):
     """
     Añade la firma de un canvas al PDF en las coordenadas x, y.
-    Se ha ajustado el tamaño de la firma para el formato horizontal.
+    Se ha ajustado el tamaño de la firma para el formato horizontal y compacto.
     """
     if canvas_result.image_data is not None:
         img_array = canvas_result.image_data.astype(np.uint8)
@@ -210,17 +210,22 @@ def main():
         pdf.ln(2)
         
         # Tablas en dos columnas
-        y_start_tables = pdf.get_y()
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, 10)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, 10)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, 10)
+        y_pos_col1 = pdf.get_y()
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, 10, y_pos_col1)
+        y_pos_col1 = pdf.get_y()
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, 10, y_pos_col1)
+        y_pos_col1 = pdf.get_y()
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, 10, y_pos_col1)
         
-        pdf.set_y(y_start_tables)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, 150)
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, 150)
-        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, 150)
+        y_pos_col2 = pdf.get_y()
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, 150, y_pos_col2)
+        y_pos_col2 = pdf.get_y()
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, 150, y_pos_col2)
+        y_pos_col2 = pdf.get_y()
+        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, 150, y_pos_col2)
 
-        pdf.set_y(max(pdf.get_y(), y_start_tables + 85))
+        # Ajustar la posición Y para la sección de observaciones y firmas
+        pdf.set_y(max(y_pos_col1, y_pos_col2) + 15)
         pdf.set_x(10)
 
         # Tabla de instrumentos de análisis
@@ -230,7 +235,8 @@ def main():
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 7)
-            ancho_col_analisis = 65
+            # Reducir el ancho de las columnas de la tabla de análisis
+            ancho_col_analisis = 60
             pdf.cell(ancho_col_analisis, 4, "Equipo", 1, 0, "C", 1)
             pdf.cell(ancho_col_analisis, 4, "Marca", 1, 0, "C", 1)
             pdf.cell(ancho_col_analisis, 4, "Modelo", 1, 0, "C", 1)
