@@ -29,6 +29,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(1)
+    return pdf.get_y()
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -214,7 +215,7 @@ def main():
         pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
         pdf.ln(3)
 
-        # --- Información general (Corregido) ---
+        # --- Información general ---
         pdf.set_font("Arial", "", 8)
         pdf.set_x(10)
         pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
@@ -240,8 +241,8 @@ def main():
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         y_after_col1 = pdf.get_y()
-
-        # Columna 2
+        
+        # Columna 2 - Se colocará aquí el resto de la información
         pdf.set_y(y_start_tables)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
@@ -249,18 +250,18 @@ def main():
         y_after_col2 = pdf.get_y()
 
         # Ajustar la posición vertical para la siguiente sección
-        pdf.set_y(max(y_after_col1, y_after_col2) + 2)
+        pdf.set_y(y_start_tables)
+        pdf.set_x(150)
 
         # --- Sección de Instrumentos de análisis ---
         pdf.set_font("Arial", "B", 8)
-        pdf.set_x(10)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         pdf.ln(1)
         
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 7)
-            pdf.set_x(10)
+            pdf.set_x(150)
             pdf.cell(60, 4, "Equipo", 1, 0, "C", 1)
             pdf.cell(40, 4, "Marca", 1, 0, "C", 1)
             pdf.cell(40, 4, "Modelo", 1, 0, "C", 1)
@@ -274,7 +275,7 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.set_x(10)
+                    pdf.set_x(150)
                     pdf.cell(60, 4, equipo, 1, 0, "L")
                     pdf.cell(40, 4, marca_equipo, 1, 0, "L")
                     pdf.cell(40, 4, modelo_equipo, 1, 0, "L")
@@ -283,9 +284,9 @@ def main():
         pdf.ln(2)
         
         # --- Observaciones y firmas ---
+        # Se colocan en la columna izquierda para evitar superposiciones con la columna 2
+        y_obs_start = pdf.get_y()
         
-        # Colocamos las observaciones primero para que ajusten su altura
-        y_obs = pdf.get_y()
         pdf.set_font("Arial", "B", 8)
         pdf.set_x(10)
         pdf.cell(0, 4, "Observaciones:", ln=True)
@@ -312,7 +313,9 @@ def main():
         pdf.ln(5)
         
         # Firmas
-        y_firma_start = pdf.get_y()
+        y_firma_start = max(y_after_col1, y_after_col2) + 2 # Ajustar la posición de las firmas para que estén debajo de ambas columnas
+        pdf.set_y(y_firma_start)
+        
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
         
