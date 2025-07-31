@@ -302,10 +302,11 @@ def main():
         pdf.set_x(150)
         pdf.cell(0, 3.5, f"Equipo Operativo: {operativo}", ln=True)
         
-        # Se juntan las líneas de texto para que no haya salto de línea
+        # Ahora se coloca "Empresa Responsable" debajo de "Nombre Técnico"
         pdf.set_x(150)
-        pdf.cell(60, 3.5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 0)
-        pdf.cell(60, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
+        pdf.cell(0, 3.5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 1)
+        pdf.set_x(150)
+        pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
 
         pdf.ln(5)
         
