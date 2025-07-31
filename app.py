@@ -198,7 +198,7 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
         
-        # --- ENCABEZADO Y TÍTULOS ---
+        # --- ENCABEZADO Y TÍTULOS CENTRADOS ---
         # Se ajusta la posición del logo para que inicie en el nuevo margen de 22mm
         try:
             pdf.image("logo_hrt_final.jpg", x=22, y=6, w=40)
@@ -207,21 +207,21 @@ def main():
         
         y_title_start = 6
         pdf.set_y(y_title_start)
-        pdf.set_x(55)
+        
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
-        pdf.set_x(55)
+        # Se centra el texto con cell(0, 4, ..., align='C')
+        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
+        
         pdf.set_font("Arial", "", 7)
-        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
-        pdf.set_x(55)
+        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
+        
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
+        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
         
         y_column_start_left = pdf.get_y() + 15
         y_column_start_right = pdf.get_y() + 5
         
         # --- COLUMNA IZQUIERDA ---
-        # Se ajusta la posición inicial de la columna izquierda a 22 mm
         pdf.set_y(y_column_start_left)
         pdf.set_x(22)
         pdf.set_font("Arial", "", 7)
@@ -238,7 +238,6 @@ def main():
         pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
-        # Se ajusta el x_pos en las llamadas a la función de tablas para la columna izquierda
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=22)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=22)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=22)
