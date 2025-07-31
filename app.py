@@ -199,8 +199,9 @@ def main():
         pdf.add_page()
         
         # --- ENCABEZADO Y TÍTULOS ---
+        # Se ajusta la posición del logo para que inicie en el nuevo margen de 22mm
         try:
-            pdf.image("logo_hrt_final.jpg", x=10, y=6, w=40)
+            pdf.image("logo_hrt_final.jpg", x=22, y=6, w=40)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
@@ -216,36 +217,34 @@ def main():
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
-        # Definimos la posición inicial de ambas columnas.
-        # Ahora el offset se aplica solo a la columna izquierda.
         y_column_start_left = pdf.get_y() + 15
         y_column_start_right = pdf.get_y() + 5
         
         # --- COLUMNA IZQUIERDA ---
-        # Usamos el nuevo offset para bajar esta columna
+        # Se ajusta la posición inicial de la columna izquierda a 22 mm
         pdf.set_y(y_column_start_left)
-        pdf.set_x(10)
+        pdf.set_x(22)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(22)
         pdf.cell(0, 3.5, f"Modelo: {modelo}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(22)
         pdf.cell(0, 3.5, f"Número de Serie: {sn}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(22)
         pdf.cell(0, 3.5, f"Número de Inventario: {inventario}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(22)
         pdf.cell(0, 3.5, f"Ubicación: {ubicacion}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(22)
         pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
+        # Se ajusta el x_pos en las llamadas a la función de tablas para la columna izquierda
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=22)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=22)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=22)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=22)
         
         # --- COLUMNA DERECHA ---
-        # Mantenemos la posición de la columna derecha más alta
         pdf.set_y(y_column_start_right) 
         
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
