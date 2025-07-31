@@ -208,7 +208,8 @@ def main():
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
         # Títulos
-        pdf.set_y(6)
+        y_title_start = 6 # Guardamos la posición vertical del primer título
+        pdf.set_y(y_title_start)
         pdf.set_font("Arial", "B", 10)
         pdf.set_x(45)
         pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
@@ -246,7 +247,8 @@ def main():
         y_after_col1 = pdf.get_y()
 
         # Columna Derecha (Se ajusta la posición vertical)
-        pdf.set_y(y_start_columns)
+        # La posición Y se establece al mismo valor que el inicio de los títulos principales
+        pdf.set_y(y_title_start)
         
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
