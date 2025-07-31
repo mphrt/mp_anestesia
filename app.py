@@ -7,18 +7,7 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items, x_pos=10, y_start=None):
-    if y_start:
-        pdf.set_y(y_start)
-    
-    # Verificar si hay espacio suficiente antes de agregar la tabla.
-    # El espacio mínimo es el tamaño de la tabla + un margen.
-    required_height = 4 + 4 + (len(items) * 4) + 1 # Título, encabezado, filas, espacio
-    
-    if pdf.get_y() + required_height > pdf.h - 20: # 20mm de margen inferior
-        pdf.add_page(orientation='L')
-        pdf.set_y(20)
-
+def create_checkbox_table(pdf, section_title, items, x_pos):
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 8)
     pdf.cell(0, 4, section_title, ln=True, border=0)
@@ -40,7 +29,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos=10, y_start=None):
         pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(1)
-    return pdf.get_y()
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -211,7 +199,7 @@ def main():
         pdf = FPDF('L', 'mm', 'A4') # Orientación horizontal 'L'
         pdf.add_page()
         
-        # Encabezado
+        # --- Encabezado ---
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
@@ -229,7 +217,7 @@ def main():
         pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="L")
         pdf.ln(3)
 
-        # Información general
+        # --- Información general ---
         pdf.set_font("Arial", "", 8)
         pdf.cell(40, 4, f"Marca: {marca}", 0, 0)
         pdf.cell(40, 4, f"Modelo: {modelo}", 0, 0)
@@ -239,30 +227,31 @@ def main():
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(1)
 
-        # Checklists
-        y_col1 = pdf.get_y()
-        y_col2 = y_col1
+        # --- Checklists en dos columnas ---
+        # Posición y de inicio para las tablas
+        y_start_tables = pdf.get_y()
         
         # Columna 1
-        y_after_col1 = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10, y_start=y_col1)
-        y_after_col1 = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
-        y_after_col1 = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
+        pdf.set_y(y_start_tables)
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
+        pdf.set_y(pdf.get_y())
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
+        pdf.set_y(pdf.get_y())
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         
         # Columna 2
-        pdf.set_y(y_col2) # Reiniciar la posición y para la segunda columna
-        y_after_col2 = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150, y_start=y_col2)
-        y_after_col2 = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
-        y_after_col2 = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
+        pdf.set_y(y_start_tables)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
+        pdf.set_y(pdf.get_y())
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
+        pdf.set_y(pdf.get_y())
+        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
         
-        # Ajustar la posición vertical después de las dos columnas de checklists
-        y_next = max(y_after_col1, y_after_col2)
+        # Ajustar la posición vertical para la siguiente sección
+        y_next = max(pdf.get_y(), y_start_tables + len(sistema_baja)*4 + len(seguridad_electrica)*4 + 50)
         pdf.set_y(y_next + 2)
-        
-        # Sección de Instrumentos de análisis
-        if pdf.get_y() > pdf.h - 80: # Verificar si hay espacio suficiente para la siguiente sección
-            pdf.add_page(orientation='L')
-            pdf.set_y(20)
 
+        # --- Sección de Instrumentos de análisis ---
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         pdf.ln(1)
@@ -288,17 +277,9 @@ def main():
                     pdf.cell(40, 4, modelo_equipo, 1, 0, "L")
                     pdf.cell(40, 4, serie_equipo, 1, 1, "L")
         
-        # Sección de observaciones y firmas
-        current_y = pdf.get_y()
-        if current_y > pdf.h - 60: # Margen para observaciones y firmas
-            pdf.add_page(orientation='L')
-            pdf.set_y(20)
-        else:
-            pdf.ln(2)
-
-        pdf.set_font("Arial", "", 8)
+        pdf.ln(2)
         
-        # Observaciones como celdas de altura dinámica
+        # --- Observaciones y firmas ---
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 8)
