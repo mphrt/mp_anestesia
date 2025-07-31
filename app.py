@@ -11,50 +11,38 @@ def create_checkbox_table(pdf, section_title, items):
     if pdf.get_y() > 260:
         pdf.add_page()
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 7, section_title, ln=True)
+    pdf.cell(0, 5, section_title, ln=True)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(140, 7, "", 0)
-    pdf.cell(15, 7, "OK", 1, 0, "C")
-    pdf.cell(15, 7, "NO", 1, 0, "C")
-    pdf.cell(15, 7, "N/A", 1, 1, "C")
+    pdf.cell(140, 5, "", 0)
+    pdf.cell(15, 5, "OK", 1, 0, "C")
+    pdf.cell(15, 5, "NO", 1, 0, "C")
+    pdf.cell(15, 5, "N/A", 1, 1, "C")
     for item, value in items:
         if pdf.get_y() > 270:
             pdf.add_page()
-        pdf.cell(140, 7, item, 1)
-        pdf.cell(15, 7, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(15, 7, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(15, 7, "X" if value == "N/A" else "", 1, 1, "C")
-    pdf.ln(3)
+        pdf.cell(140, 5, item, 1)
+        pdf.cell(15, 5, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(15, 5, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(15, 5, "X" if value == "N/A" else "", 1, 1, "C")
+    pdf.ln(2)
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
         img_array = canvas_result.image_data.astype(np.uint8)
         img = Image.fromarray(img_array)
 
-        # Convert to grayscale for easier background detection
         gray_img = img.convert('L')
-        
-        # Determine the background color's grayscale value. Since background_color="#EEEEEE" (light gray)
-        # We can assume anything close to this value is background.
-        # A simple threshold can separate the signature (darker) from the background.
-        # Let's say we consider anything darker than 230 (on a 0-255 scale) as part of the signature.
-        threshold = 230 
-        
-        # Get coordinates of all pixels that are darker than the threshold
+        threshold = 230
         coords = np.argwhere(np.array(gray_img) < threshold)
-        
+
         if coords.size == 0:
-            # No significant drawing detected, skip adding the image
             return
         
-        # Find the bounding box of these pixels
         min_y, min_x = coords.min(axis=0)
         max_y, max_x = coords.max(axis=0)
         
-        # Crop the image based on the detected bounding box
         cropped_img = img.crop((min_x, min_y, max_x + 1, max_y + 1))
         
-        # Convert to RGB if it's still RGBA after cropping (it should be fine if original was RGB or if we convert later)
         if cropped_img.mode == 'RGBA':
             cropped_img = cropped_img.convert('RGB')
         
@@ -66,20 +54,15 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
             tmp_file.write(img_byte_arr.read())
             tmp_path = tmp_file.name
         
-        # Define a desired width for the signature image in PDF
-        desired_img_width_mm = 50 
-        # Calculate height based on the cropped image's aspect ratio
+        desired_img_width_mm = 50
         img_height_mm = (cropped_img.height / cropped_img.width) * desired_img_width_mm
         
-        # Ensure signature doesn't exceed a max height
         max_height = 30
         if img_height_mm > max_height:
             img_height_mm = max_height
-            # Adjust width to maintain aspect ratio with the new max height
-            desired_img_width_mm = (cropped_img.width / cropped_img.height) * img_height_mm 
+            desired_img_width_mm = (cropped_img.width / cropped_img.height) * img_height_mm
 
-        # Calculate x to center the image within a 60mm wide "signature box" area
-        center_of_area_x = x_start_of_box + (60 / 2) # 60mm is the conceptual width for each signature
+        center_of_area_x = x_start_of_box + (60 / 2)
         image_x = center_of_area_x - (desired_img_width_mm / 2)
         
         try:
@@ -177,34 +160,40 @@ def main():
     empresa = st.text_input("Empresa Responsable")
 
     st.subheader("Firmas")
-    st.write("Firma de Técnico Encargado:")
-    canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
-    st.write("Firma de Ingeniería Clínica:")
-    canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_ingenieria")
-    st.write("Firma de Personal Clínico:")
-    canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_clinico")
+    col_tecnico, col_ingenieria, col_clinico = st.columns(3)
+
+    with col_tecnico:
+        st.write("Técnico Encargado:")
+        canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_tecnico")
+
+    with col_ingenieria:
+        st.write("Ingeniería Clínica:")
+        canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_ingenieria")
+
+    with col_clinico:
+        st.write("Personal Clínico:")
+        canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_clinico")
+
 
     if st.button("Generar PDF"):
         pdf = FPDF()
         pdf.add_page()
-        # You'll need to make sure 'logo_hrt_final.jpg' is in the same directory as your script
-        # or provide a full path to it.
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=45)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
+        pdf.cell(0, 8, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
         pdf.set_font("Arial", "", 10)
-        pdf.cell(0, 8, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="C")
+        pdf.cell(0, 6, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="C")
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 10, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
-        pdf.ln(5)
+        pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
+        pdf.ln(3)
 
         for label, val in [("MARCA", marca), ("MODELO", modelo), ("S/N", sn), ("N° INVENTARIO", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%d/%m/%Y"))]:
-            pdf.cell(0, 7, f"{label}: {val}", ln=True)
-        pdf.ln(5)
+            pdf.cell(0, 5, f"{label}: {val}", ln=True)
+        pdf.ln(3)
 
         for title, data in [
             ("1. Chequeo Visual", chequeo_visual),
@@ -217,44 +206,47 @@ def main():
             create_checkbox_table(pdf, title, data)
 
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 7, "7. Instrumentos de análisis", ln=True)
+        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
         pdf.set_font("Arial", "", 10)
         for equipo, marca, modelo, serie in [(eq1, marca1, modelo1, serie1), (eq2, marca2, modelo2, serie2)]:
-            pdf.cell(0, 7, f"Equipo: {equipo} | Marca: {marca} | Modelo: {modelo} | N° Serie: {serie}", ln=True)
+            pdf.cell(0, 5, f"Equipo: {equipo} | Marca: {marca} | Modelo: {modelo} | N° Serie: {serie}", ln=True)
 
-        pdf.ln(5)
-        pdf.multi_cell(0, 6, f"Observaciones: {observaciones}")
-        pdf.multi_cell(0, 6, f"Observaciones (uso interno): {observaciones_interno}")
-        pdf.cell(0, 7, f"Equipo Operativo: {operativo}", ln=True)
-        pdf.cell(0, 7, f"Nombre Técnico: {tecnico}", ln=True)
-        pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
-
-        #--- INICIO DE LAS MODIFICACIONES ---
+        pdf.ln(3)
+        pdf.set_font("Arial", "", 10)
+        pdf.multi_cell(0, 4, f"Observaciones: {observaciones}")
+        pdf.multi_cell(0, 4, f"Observaciones (uso interno): {observaciones_interno}")
+        pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
+        pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", ln=True)
+        pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
         
-        # Obtener la posición Y actual para colocar las firmas
-        y_signatures_start = pdf.get_y() + 10 # 10mm de espacio después de la última línea de texto
+        pdf.ln(10)
         
-        # Define the x positions for the start of each signature area.
-        x_positions_for_signature_area = [20, 80, 140]  
-        y_firma_image = y_signatures_start 
+        # Adjusting positioning for the signatures to be on a single line.
+        x_positions_for_signature_area = [15, 80, 145]
+        y_firma_start = pdf.get_y()
+        y_firma_image = y_firma_start + 5
         
-        # Add signatures
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
 
-        # Move down to place the lines and labels
-        y_firma_text = y_firma_image + 30 
+        y_firma_text = y_firma_image + 30
         
-        # Add signature lines and labels, centered within a 60mm width for each
-        for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
-            pdf.set_y(y_firma_text)
-            pdf.set_x(x_positions_for_signature_area[i]) 
-            pdf.cell(60, 6, "_________________________", 0, 2, 'C') 
-            pdf.set_x(x_positions_for_signature_area[i]) 
-            pdf.cell(60, 6, label, 0, 0, 'C') 
-
-        #--- FIN DE LAS MODIFICACIONES ---
+        pdf.set_y(y_firma_text)
+        pdf.set_x(x_positions_for_signature_area[0])
+        pdf.cell(60, 5, "_________________________", 0, 0, 'C')
+        pdf.set_x(x_positions_for_signature_area[1])
+        pdf.cell(60, 5, "_________________________", 0, 0, 'C')
+        pdf.set_x(x_positions_for_signature_area[2])
+        pdf.cell(60, 5, "_________________________", 0, 1, 'C')
+        
+        pdf.set_y(pdf.get_y() - 1)
+        pdf.set_x(x_positions_for_signature_area[0])
+        pdf.cell(60, 5, "TÉCNICO ENCARGADO", 0, 0, 'C')
+        pdf.set_x(x_positions_for_signature_area[1])
+        pdf.cell(60, 5, "INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_x(x_positions_for_signature_area[2])
+        pdf.cell(60, 5, "PERSONAL CLÍNICO", 0, 1, 'C')
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
