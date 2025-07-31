@@ -202,24 +202,21 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
         
-        # --- Encabezado y títulos en la columna izquierda ---
+        # --- Encabezado y títulos ---
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
-        # Títulos
-        y_title_start = 6
+        # Títulos centrados
+        y_title_start = 6 
         pdf.set_y(y_title_start)
         pdf.set_font("Arial", "B", 9)
-        pdf.set_x(45)
-        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
-        pdf.set_x(45)
+        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
         pdf.set_font("Arial", "", 7)
-        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
-        pdf.set_x(45)
+        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
+        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
         
         pdf.ln(5)
 
