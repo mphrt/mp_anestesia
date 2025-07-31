@@ -205,7 +205,8 @@ def main():
         
         # --- Encabezado y títulos ---
         try:
-            pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
+            # Se aumentó el ancho del logo de 30 a 40 mm
+            pdf.image("logo_hrt_final.jpg", x=10, y=6, w=40)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
