@@ -30,7 +30,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 3.5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
     
-    # Se eliminó el espacio de pdf.ln(2) para pegar los ítems
     # Espacio después de la tabla para separar de la siguiente
     pdf.ln(2)
 
