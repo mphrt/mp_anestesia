@@ -229,12 +229,14 @@ def main():
         pdf.cell(0, 7, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 7, f"Empresa Responsable: {empresa}", ln=True)
 
-        pdf.add_page()
+        #--- INICIO DE LAS MODIFICACIONES ---
+        
+        # Obtener la posición Y actual para colocar las firmas
+        y_signatures_start = pdf.get_y() + 10 # 10mm de espacio después de la última línea de texto
         
         # Define the x positions for the start of each signature area.
-        # These are the left-most points of where each signature's conceptual 60mm box starts.
-        x_positions_for_signature_area = [20, 80, 140] 
-        y_firma_image = 60 # Y position for the top of the signature image
+        x_positions_for_signature_area = [20, 80, 140]  
+        y_firma_image = y_signatures_start 
         
         # Add signatures
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
@@ -242,18 +244,17 @@ def main():
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
 
         # Move down to place the lines and labels
-        # Assuming signature image can be up to 30mm tall, we place the line below that.
         y_firma_text = y_firma_image + 30 
         
         # Add signature lines and labels, centered within a 60mm width for each
         for i, label in enumerate(["TÉCNICO ENCARGADO", "INGENIERÍA CLÍNICA", "PERSONAL CLÍNICO"]):
-            # Set the Y position for the current line of text
             pdf.set_y(y_firma_text)
-            # Set X position to the start of the current signature area
             pdf.set_x(x_positions_for_signature_area[i]) 
-            pdf.cell(60, 6, "_________________________", 0, 2, 'C') # Centered line, move to next line (within the 60mm cell)
-            pdf.set_x(x_positions_for_signature_area[i]) # Reset X for the label
-            pdf.cell(60, 6, label, 0, 0, 'C') # Centered label, stay on same line
+            pdf.cell(60, 6, "_________________________", 0, 2, 'C') 
+            pdf.set_x(x_positions_for_signature_area[i]) 
+            pdf.cell(60, 6, label, 0, 0, 'C') 
+
+        #--- FIN DE LAS MODIFICACIONES ---
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
