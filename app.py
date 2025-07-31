@@ -8,26 +8,27 @@ import numpy as np
 from PIL import Image
 
 def create_checkbox_table(pdf, section_title, items, x_pos):
+    # Se redujo el tamaño de la fuente para que quepa más contenido
     pdf.set_x(x_pos)
-    pdf.set_font("Arial", "B", 8)
-    pdf.cell(0, 5, section_title, ln=True, border=0)
+    pdf.set_font("Arial", "B", 7)
+    pdf.cell(0, 4, section_title, ln=True, border=0)
     
     # Encabezados de la tabla
     pdf.set_x(x_pos)
-    pdf.set_font("Arial", "", 7)
-    pdf.cell(85, 4, "", 0)
-    pdf.cell(10, 4, "OK", 1, 0, "C")
-    pdf.cell(10, 4, "NO", 1, 0, "C")
-    pdf.cell(10, 4, "N/A", 1, 1, "C")
+    pdf.set_font("Arial", "", 6)
+    pdf.cell(85, 3.5, "", 0)
+    pdf.cell(10, 3.5, "OK", 1, 0, "C")
+    pdf.cell(10, 3.5, "NO", 1, 0, "C")
+    pdf.cell(10, 3.5, "N/A", 1, 1, "C")
     
     # Contenido de la tabla
-    pdf.set_font("Arial", "", 7)
+    pdf.set_font("Arial", "", 6)
     for item, value in items:
         pdf.set_x(x_pos)
-        pdf.cell(85, 4, item, 1, 0)
-        pdf.cell(10, 4, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
+        pdf.cell(85, 3.5, item, 1, 0)
+        pdf.cell(10, 3.5, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(10, 3.5, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(10, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
     
     # Espacio después de la tabla para separar de la siguiente
     pdf.ln(2)
@@ -208,17 +209,17 @@ def main():
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
         # Títulos
-        y_title_start = 6 # Guardamos la posición vertical del primer título
+        y_title_start = 6
         pdf.set_y(y_title_start)
-        pdf.set_font("Arial", "B", 10)
-        pdf.set_x(45)
-        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
-        pdf.set_x(45)
-        pdf.set_font("Arial", "", 8)
-        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
-        pdf.set_x(45)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
+        pdf.set_x(45)
+        pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
+        pdf.set_x(45)
+        pdf.set_font("Arial", "", 7)
+        pdf.cell(0, 3, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
+        pdf.set_x(45)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
         pdf.ln(5)
 
@@ -227,18 +228,18 @@ def main():
 
         # Columna Izquierda
         pdf.set_x(10)
-        pdf.set_font("Arial", "", 8)
-        pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
+        pdf.set_font("Arial", "", 7)
+        pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
         pdf.set_x(10)
-        pdf.cell(0, 4, f"Modelo: {modelo}", 0, 1)
+        pdf.cell(0, 3.5, f"Modelo: {modelo}", 0, 1)
         pdf.set_x(10)
-        pdf.cell(0, 4, f"Número de Serie: {sn}", 0, 1)
+        pdf.cell(0, 3.5, f"Número de Serie: {sn}", 0, 1)
         pdf.set_x(10)
-        pdf.cell(0, 4, f"Número de Inventario: {inventario}", 0, 1)
+        pdf.cell(0, 3.5, f"Número de Inventario: {inventario}", 0, 1)
         pdf.set_x(10)
-        pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 1)
+        pdf.cell(0, 3.5, f"Ubicación: {ubicacion}", 0, 1)
         pdf.set_x(10)
-        pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
+        pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
@@ -247,7 +248,6 @@ def main():
         y_after_col1 = pdf.get_y()
 
         # Columna Derecha (Se ajusta la posición vertical)
-        # La posición Y se establece al mismo valor que el inicio de los títulos principales
         pdf.set_y(y_title_start)
         
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
@@ -256,19 +256,19 @@ def main():
         
         # --- Sección de Instrumentos de análisis (Columna Derecha) ---
         pdf.set_x(150)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
+        pdf.set_font("Arial", "B", 7)
+        pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
-            pdf.set_font("Arial", "B", 7)
+            pdf.set_font("Arial", "B", 6)
             pdf.set_x(150)
-            pdf.cell(30, 4, "Equipo", 1, 0, "C", 1)
-            pdf.cell(25, 4, "Marca", 1, 0, "C", 1)
-            pdf.cell(25, 4, "Modelo", 1, 0, "C", 1)
-            pdf.cell(25, 4, "N° Serie", 1, 1, "C", 1)
+            pdf.cell(30, 3.5, "Equipo", 1, 0, "C", 1)
+            pdf.cell(25, 3.5, "Marca", 1, 0, "C", 1)
+            pdf.cell(25, 3.5, "Modelo", 1, 0, "C", 1)
+            pdf.cell(25, 3.5, "N° Serie", 1, 1, "C", 1)
             
-            pdf.set_font("Arial", "", 7)
+            pdf.set_font("Arial", "", 6)
             for equipo_data in st.session_state.analisis_equipos:
                 equipo = equipo_data.get('equipo', '')
                 marca_equipo = equipo_data.get('marca', '')
@@ -277,36 +277,37 @@ def main():
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
                     pdf.set_x(150)
-                    pdf.cell(30, 4, equipo, 1, 0, "L")
-                    pdf.cell(25, 4, marca_equipo, 1, 0, "L")
-                    pdf.cell(25, 4, modelo_equipo, 1, 0, "L")
-                    pdf.cell(25, 4, serie_equipo, 1, 1, "L")
+                    pdf.cell(30, 3.5, equipo, 1, 0, "L")
+                    pdf.cell(25, 3.5, marca_equipo, 1, 0, "L")
+                    pdf.cell(25, 3.5, modelo_equipo, 1, 0, "L")
+                    pdf.cell(25, 3.5, serie_equipo, 1, 1, "L")
         
         pdf.ln(2)
 
         # --- Observaciones y firmas (Columna Derecha) ---
         pdf.set_x(150)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "Observaciones:", ln=True)
-        pdf.set_font("Arial", "", 8)
+        pdf.set_font("Arial", "B", 7)
+        pdf.cell(0, 3.5, "Observaciones:", ln=True)
+        pdf.set_font("Arial", "", 7)
         pdf.set_x(150)
-        pdf.multi_cell(0, 4, f"{observaciones}")
+        pdf.multi_cell(0, 3.5, f"{observaciones}")
         pdf.ln(1)
         
         pdf.set_x(150)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "Observaciones (uso interno):", ln=True)
-        pdf.set_font("Arial", "", 8)
+        pdf.set_font("Arial", "B", 7)
+        pdf.cell(0, 3.5, "Observaciones (uso interno):", ln=True)
+        pdf.set_font("Arial", "", 7)
         pdf.set_x(150)
-        pdf.multi_cell(0, 4, f"{observaciones_interno}")
+        pdf.multi_cell(0, 3.5, f"{observaciones_interno}")
         pdf.ln(1)
         
         pdf.set_x(150)
-        pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
+        pdf.cell(0, 3.5, f"Equipo Operativo: {operativo}", ln=True)
+        
+        # Se juntan las líneas de texto para que no haya salto de línea
         pdf.set_x(150)
-        pdf.cell(100, 4, f"Nombre Técnico: {tecnico}", 0, 0)
-        pdf.set_x(150)
-        pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
+        pdf.cell(60, 3.5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 0)
+        pdf.cell(60, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
 
         pdf.ln(5)
         
@@ -332,6 +333,7 @@ def main():
         pdf.cell(50, 4, "_________________________", 0, 1, 'C')
         
         pdf.set_y(pdf.get_y() - 1)
+        pdf.set_font("Arial", "", 7)
         pdf.set_x(x_positions_for_signature_area[0])
         pdf.cell(50, 4, "TÉCNICO ENCARGADO", 0, 0, 'C')
         pdf.set_x(x_positions_for_signature_area[1])
