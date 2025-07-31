@@ -218,6 +218,8 @@ def main():
         
         pdf.ln(10)
 
+        y_start_columns = pdf.get_y()
+
         # Columna Izquierda
         pdf.set_x(10)
         pdf.set_font("Arial", "", 7)
@@ -238,16 +240,12 @@ def main():
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
-        
-        # Se movió el ítem 5 a la columna izquierda
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=10)
-        
-        # Guardar la posición 'y' después de la columna izquierda para usarla en la derecha
         y_after_col1 = pdf.get_y()
 
         # Columna Derecha
-        pdf.set_y(pdf.get_y() - 100) # Se subió el cursor para la columna derecha
+        pdf.set_y(y_start_columns)
         
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
         
         # Sección de Instrumentos de análisis (Columna Derecha)
@@ -305,9 +303,10 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
 
+        pdf.ln(5)
+        
         # Firmas
-        # Se ajusta la posición de las firmas para que suban
-        y_firma_start = pdf.get_y() + 5
+        y_firma_start = max(y_after_col1, pdf.get_y())
         pdf.set_y(y_firma_start)
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
