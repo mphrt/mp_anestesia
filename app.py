@@ -14,12 +14,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
     no_width = 15
     na_width = 15
     
-    # Comprobar si hay que crear una nueva página
-    # Se ajusta la lógica de salto de página para el formato horizontal
-    if y_pos > 180:
-        pdf.add_page(orientation='L')
-        y_pos = 10 # Reiniciar la posición y en la nueva página
-    
     # Título de la sección
     pdf.set_xy(x_pos, y_pos)
     pdf.set_font("Arial", "B", 10)
@@ -37,19 +31,16 @@ def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
     
     # Filas de la tabla
     for item, value in items:
+        # Aquí forzamos la posición y para cada fila
         pdf.set_xy(x_pos, y_pos)
-        # Se verifica si el texto del item es muy largo
-        # Para evitar que el texto se salga de la celda, se puede usar multi_cell
-        # o simplemente truncar el texto. Para este ejemplo, lo dejaremos simple.
         pdf.cell(item_width, 5, item, 1)
         pdf.cell(ok_width, 5, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(no_width, 5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(na_width, 5, "X" if value == "N/A" else "", 1, 1, "C")
         y_pos += 5
 
-    pdf.ln(2)
-    y_pos += 2
-    return y_pos # Devolver la posición Y final para la siguiente tabla
+    y_pos += 2 # Espacio después de la tabla
+    return y_pos
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -234,25 +225,37 @@ def main():
         pdf.ln(3)
         
         pdf.set_font("Arial", "", 10)
-        for label, val in [("Marca", marca), ("Modelo", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("Ubicación", ubicacion), ("Fecha", fecha.strftime("%d/%m/%Y"))]:
-            pdf.cell(0, 5, f"{label}: {val}", ln=1)
+        # Información de la máquina en un bloque
+        info_block = [
+            f"Marca: {marca}",
+            f"Modelo: {modelo}",
+            f"Número de Serie: {sn}",
+            f"Número de Inventario: {inventario}",
+            f"Ubicación: {ubicacion}",
+            f"Fecha: {fecha.strftime('%d/%m/%Y')}"
+        ]
+        
+        for line in info_block:
+            pdf.cell(0, 5, line, ln=1)
         pdf.ln(3)
 
-        # Posiciones de las columnas
+        # Posiciones y dimensiones para las columnas
         x_pos_col1 = 10
-        x_pos_col2 = 145 # Posición ajustada para la segunda columna
+        x_pos_col2 = 145
         y_pos_start = pdf.get_y()
-
+        
         # Generar las tablas de la primera columna
-        y_pos_col1_end = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_start)
+        y_pos_col1_end = y_pos_start
+        y_pos_col1_end = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_col1_end)
         y_pos_col1_end = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos_col1, y_pos_col1_end)
         y_pos_col1_end = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos_col1, y_pos_col1_end)
         
-        # Generar las tablas de la segunda columna de forma independiente
-        y_pos_col2_end = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_start)
+        # Generar las tablas de la segunda columna
+        y_pos_col2_end = y_pos_start
+        y_pos_col2_end = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_col2_end)
         y_pos_col2_end = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, y_pos_col2_end)
         y_pos_col2_end = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, y_pos_col2_end)
-        
+
         # El resto de la información se coloca debajo de las dos columnas
         max_y = max(y_pos_col1_end, y_pos_col2_end)
         pdf.set_y(max_y)
@@ -287,9 +290,11 @@ def main():
         pdf.ln(3)
         pdf.set_x(x_pos_col1)
         pdf.set_font("Arial", "", 10)
+        # Se usa multi_cell para las observaciones
         pdf.multi_cell(0, 4, f"Observaciones: {observaciones}")
         pdf.set_x(x_pos_col1)
         pdf.multi_cell(0, 4, f"Observaciones (uso interno): {observaciones_interno}")
+        
         pdf.set_x(x_pos_col1)
         pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=1)
         pdf.set_x(x_pos_col1)
