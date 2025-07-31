@@ -1,5 +1,5 @@
 import streamlit as st
-from fpdf import FPDF, fpdf
+from fpdf import FPDF
 import datetime
 import io
 import tempfile
@@ -7,37 +7,24 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# Sobrescribir la clase FPDF para evitar el error de codificación
-class PDF(FPDF):
-    def header(self):
-        # La cabecera se mantendrá igual, pero el ancho total de la página será mayor
-        pass
-
-    def footer(self):
-        # El pie de página se mantendrá igual
-        pass
-
 def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
     # La lógica para crear tablas ahora toma en cuenta la posición (x, y)
-    if pdf.get_y() > 190:  # Ajustar el salto de página para el formato horizontal
-        pdf.add_page(orientation='L')
-    
     pdf.set_xy(x_pos, y_pos)
+    
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 5, section_title, ln=True)
+    
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(140, 5, "", 0)
+    pdf.cell(100, 5, "", 0)
     pdf.cell(15, 5, "OK", 1, 0, "C")
     pdf.cell(15, 5, "NO", 1, 0, "C")
     pdf.cell(15, 5, "N/A", 1, 1, "C")
     
     for item, value in items:
         pdf.set_x(x_pos)
-        if pdf.get_y() > 200: # Ajustar el salto de página
-            pdf.add_page(orientation='L')
-            pdf.set_x(x_pos)
-        pdf.cell(140, 5, item, 1)
+        # Se ajusta el ancho de la celda para que quepa el texto largo
+        pdf.cell(100, 5, item, 1)
         pdf.cell(15, 5, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(15, 5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(15, 5, "X" if value == "N/A" else "", 1, 1, "C")
@@ -210,8 +197,7 @@ def main():
 
 
     if st.button("Generar PDF"):
-        # Se cambia el constructor de FPDF para usar la orientación 'L' (Landscape)
-        pdf = PDF(orientation='L', unit='mm', format='A4')
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         
         try:
@@ -226,32 +212,29 @@ def main():
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(3)
-
+        
         pdf.set_font("Arial", "", 10)
         for label, val in [("Marca", marca), ("Modelo", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("Ubicación", ubicacion), ("Fecha", fecha.strftime("%d/%m/%Y"))]:
             pdf.cell(0, 5, f"{label}: {val}", ln=True)
         pdf.ln(3)
 
-        # Dividir la página en dos columnas
-        # Primera columna para las primeras 3 secciones
-        y_pos_col1 = pdf.get_y()
+        # Posiciones de las columnas
         x_pos_col1 = 10
-        y_pos_col2 = y_pos_col1
-        x_pos_col2 = 150 # Posición de la segunda columna
+        x_pos_col2 = 145 # Posición ajustada para la segunda columna
+        y_pos_start = pdf.get_y()
 
-        # Primera columna
-        y_pos_col1 = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_col1)
-        y_pos_col1 = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos_col1, y_pos_col1)
-        y_pos_col1 = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos_col1, y_pos_col1)
+        # Generar las tablas de la primera columna
+        y_pos_col1_end = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_start)
+        y_pos_col1_end = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos_col1, y_pos_col1_end)
+        y_pos_col1_end = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos_col1, y_pos_col1_end)
 
-        # Segunda columna
-        pdf.set_xy(x_pos_col2, y_pos_col2)
-        y_pos_col2 = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_col2)
-        y_pos_col2 = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, y_pos_col2)
-        y_pos_col2 = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, y_pos_col2)
-
+        # Generar las tablas de la segunda columna
+        y_pos_col2_end = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_start)
+        y_pos_col2_end = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, pdf.get_y())
+        y_pos_col2_end = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, pdf.get_y())
+        
         # El resto de la información se coloca debajo de las dos columnas
-        max_y = max(y_pos_col1, y_pos_col2)
+        max_y = max(y_pos_col1_end, y_pos_col2_end)
         pdf.set_y(max_y + 5)
         
         pdf.set_font("Arial", "B", 10)
