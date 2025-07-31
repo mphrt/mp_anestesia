@@ -211,7 +211,7 @@ def main():
         pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(3)
 
-        for label, val in [("MARCA", marca), ("MODELO", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%d/%m/%Y"))]:
+        for label, val in [("Marca", marca), ("Modelo", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("Ubicación", ubicacion), ("Fecha", fecha.strftime("%d/%m/%Y"))]:
             pdf.cell(0, 5, f"{label}: {val}", ln=True)
         pdf.ln(3)
 
