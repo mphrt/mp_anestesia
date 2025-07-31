@@ -244,8 +244,8 @@ def main():
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         y_after_col1 = pdf.get_y()
 
-        # Columna Derecha (Se ajusta la posición vertical)
-        pdf.set_y(y_title_start)
+        # Columna Derecha
+        pdf.set_y(y_start_columns)
         
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
