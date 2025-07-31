@@ -7,11 +7,13 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items, x_pos=10, y_start=None):
-    if y_start is not None:
-        pdf.set_y(y_start)
+def create_checkbox_table(pdf, section_title, items, x_pos=10):
+    # Verificar si hay espacio suficiente antes de agregar la tabla
+    if pdf.get_y() > 170:
+        pdf.add_page(orientation='L')
+        pdf.set_y(20)  # Reajustar la posición y si se añade una nueva página
+
     pdf.set_x(x_pos)
-    
     pdf.set_font("Arial", "B", 8)
     pdf.cell(0, 4, section_title, ln=True, border=0)
     
@@ -202,12 +204,12 @@ def main():
         pdf = FPDF('L', 'mm', 'A4') # Orientación horizontal 'L'
         pdf.add_page()
         
+        # Encabezado
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
-        # Encabezado en la parte superior derecha
         pdf.set_y(6)
         pdf.set_x(150)
         pdf.set_font("Arial", "B", 10)
@@ -220,7 +222,7 @@ def main():
         pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="L")
         pdf.ln(3)
 
-        # Información general en dos columnas
+        # Información general
         pdf.set_font("Arial", "", 8)
         pdf.cell(40, 4, f"Marca: {marca}", 0, 0)
         pdf.cell(40, 4, f"Modelo: {modelo}", 0, 0)
@@ -230,20 +232,21 @@ def main():
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(1)
 
-        # Dividir la información de las tablas en dos columnas
-        y_start_col1 = pdf.get_y()
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, y_start=y_start_col1)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, y_start=pdf.get_y())
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, y_start=pdf.get_y())
-        y_end_col1 = pdf.get_y()
-
-        pdf.set_y(y_start_col1)
+        # Checklists
+        y_col1 = pdf.get_y()
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
+        
+        # Posición para la segunda columna de checklists
+        y_col2 = y_col1
+        pdf.set_y(y_col2)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
-        y_end_col2 = pdf.get_y()
         
-        y_next = max(y_end_col1, y_end_col2)
+        # Ajustar la posición vertical después de las dos columnas de checklists
+        y_next = max(pdf.get_y(), y_col1 + len(chequeo_visual + sistema_alta + sistema_baja) * 5)
         pdf.set_y(y_next + 2)
 
         # Sección de Instrumentos de análisis
@@ -271,7 +274,7 @@ def main():
                     pdf.cell(40, 4, marca_equipo, 1, 0, "L")
                     pdf.cell(40, 4, modelo_equipo, 1, 0, "L")
                     pdf.cell(40, 4, serie_equipo, 1, 1, "L")
-
+        
         pdf.ln(2)
         pdf.set_font("Arial", "", 8)
         
