@@ -198,12 +198,12 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
         
+        # --- ENCABEZADO Y TÍTULOS ---
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=40)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
-        # Títulos en la columna superior
         y_title_start = 6
         pdf.set_y(y_title_start)
         pdf.set_x(55)
@@ -216,12 +216,12 @@ def main():
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
-        pdf.ln(10)
+        # Guardamos la posición Y para alinear las dos columnas
+        y_column_start = pdf.get_y()
+        pdf.ln(5)
 
-        # Se define la posición inicial de la columna izquierda y derecha para que comiencen juntas
-        y_start_columns = pdf.get_y()
-
-        # --- Columna Izquierda ---
+        # --- COLUMNA IZQUIERDA ---
+        pdf.set_y(y_column_start)
         pdf.set_x(10)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
@@ -241,10 +241,10 @@ def main():
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
-
-        # --- Columna Derecha ---
-        # Se establece la posición de la columna derecha al mismo nivel de 'y_start_columns'
-        pdf.set_y(y_start_columns)
+        
+        # --- COLUMNA DERECHA ---
+        # Nos movemos a la misma posición Y guardada antes para empezar la columna derecha a la par
+        pdf.set_y(y_column_start) 
         
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
@@ -304,7 +304,7 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # --- SECCIÓN DE FIRMAS (mantiene la misma lógica de alineación que la versión anterior) ---
+        # --- SECCIÓN DE FIRMAS ---
         pdf.ln(5) 
         
         x_tecnico = 160 + (117 / 3 / 2) - (50 / 2)
