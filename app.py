@@ -201,25 +201,32 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
         
-        # --- Encabezado ---
+        # --- Encabezado y títulos en la columna izquierda ---
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
+        # Títulos
         pdf.set_y(6)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
+        pdf.set_x(50)
+        pdf.cell(100, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
+        pdf.set_x(50)
         pdf.set_font("Arial", "", 8)
-        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
+        pdf.cell(100, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
+        pdf.set_x(50)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
-        pdf.ln(3)
+        pdf.cell(100, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
+        
+        pdf.ln(5)
 
-        # --- Información general (Columna Izquierda) ---
+        # Secciones principales
         y_start_columns = pdf.get_y()
-        pdf.set_font("Arial", "", 8)
+
+        # Columna Izquierda
         pdf.set_x(10)
+        pdf.set_font("Arial", "", 8)
         pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
         pdf.set_x(10)
         pdf.cell(0, 4, f"Modelo: {modelo}", 0, 1)
@@ -233,23 +240,18 @@ def main():
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
-        # --- Checklists en dos columnas ---
-        
-        # Columna Izquierda (Items 1, 2, 3)
-        pdf.set_y(pdf.get_y())
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         y_after_col1 = pdf.get_y()
+
+        # Columna Derecha
+        # Se sube la posición para que coincida con el inicio de la información de la izquierda
+        pdf.set_y(y_start_columns) 
         
-        # Columna Derecha (Items 4, 5, 6, Instrumentos y observaciones)
-        pdf.set_y(y_start_columns)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
-        
-        # Ajustamos la posición para las siguientes secciones en la columna derecha
-        pdf.set_x(150)
         
         # --- Sección de Instrumentos de análisis (Columna Derecha) ---
         pdf.set_x(150)
