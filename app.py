@@ -145,14 +145,35 @@ def main():
     ])
 
     st.subheader("7. Instrumentos de análisis")
-    eq1 = st.text_input("Equipo 1")
-    marca1 = st.text_input("Marca 1")
-    modelo1 = st.text_input("Modelo 1")
-    serie1 = st.text_input("N° Serie 1")
-    eq2 = st.text_input("Equipo 2")
-    marca2 = st.text_input("Marca 2")
-    modelo2 = st.text_input("Modelo 2")
-    serie2 = st.text_input("N° Serie 2")
+
+    # Inicializar una lista para los equipos de análisis
+    if 'analisis_equipos' not in st.session_state:
+        st.session_state.analisis_equipos = [{}]
+
+    # Función para agregar un nuevo equipo de análisis
+    def add_equipo():
+        st.session_state.analisis_equipos.append({})
+
+    # Mostrar formularios para cada equipo en la lista
+    for i, equipo_data in enumerate(st.session_state.analisis_equipos):
+        st.markdown(f"**Equipo {i+1}**")
+        col_eq, col_btn = st.columns([0.9, 0.1])
+        with col_eq:
+            st.session_state.analisis_equipos[i]['equipo'] = st.text_input("Equipo", key=f"equipo_{i}")
+            st.session_state.analisis_equipos[i]['marca'] = st.text_input("Marca", key=f"marca_{i}")
+            st.session_state.analisis_equipos[i]['modelo'] = st.text_input("Modelo", key=f"modelo_{i}")
+            st.session_state.analisis_equipos[i]['serie'] = st.text_input("N° Serie", key=f"serie_{i}")
+        
+        # Eliminar el botón de "Eliminar" para el primer equipo si solo hay uno
+        if i > 0:
+            with col_btn:
+                st.write("") # Add a little space
+                st.button("−", key=f"remove_btn_{i}", on_click=lambda idx=i: st.session_state.analisis_equipos.pop(idx))
+    
+    # Botón para añadir más equipos
+    st.button("Agregar Equipo +", on_click=add_equipo)
+
+
     observaciones = st.text_area("Observaciones")
     observaciones_interno = st.text_area("Observaciones (uso interno)")
     operativo = st.radio("¿Equipo operativo?", ["SI", "NO"])
@@ -208,8 +229,16 @@ def main():
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
         pdf.set_font("Arial", "", 10)
-        for equipo, marca, modelo, serie in [(eq1, marca1, modelo1, serie1), (eq2, marca2, modelo2, serie2)]:
-            pdf.cell(0, 5, f"Equipo: {equipo} | Marca: {marca} | Modelo: {modelo} | N° Serie: {serie}", ln=True)
+        # Bucle para añadir dinámicamente los equipos al PDF
+        for equipo_data in st.session_state.analisis_equipos:
+            equipo = equipo_data.get('equipo', '')
+            marca_equipo = equipo_data.get('marca', '')
+            modelo_equipo = equipo_data.get('modelo', '')
+            serie_equipo = equipo_data.get('serie', '')
+            
+            # Solo añadir la línea si al menos un campo está rellenado
+            if equipo or marca_equipo or modelo_equipo or serie_equipo:
+                pdf.cell(0, 5, f"Equipo: {equipo} | Marca: {marca_equipo} | Modelo: {modelo_equipo} | N° Serie: {serie_equipo}", ln=True)
 
         pdf.ln(3)
         pdf.set_font("Arial", "", 10)
@@ -221,7 +250,6 @@ def main():
         
         pdf.ln(10)
         
-        # Adjusting positioning for the signatures to be on a single line.
         x_positions_for_signature_area = [15, 80, 145]
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
