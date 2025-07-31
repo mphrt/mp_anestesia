@@ -28,6 +28,9 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 4, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
+    
+    # Espacio después de la tabla para separar de la siguiente
+    pdf.ln(2)
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -247,7 +250,6 @@ def main():
         
         # Ajustamos la posición para las siguientes secciones en la columna derecha
         pdf.set_x(150)
-        pdf.ln(2)
         
         # --- Sección de Instrumentos de análisis (Columna Derecha) ---
         pdf.set_x(150)
@@ -306,7 +308,8 @@ def main():
         pdf.ln(5)
         
         # Firmas (Se mantienen abajo para que no interfieran con las columnas)
-        y_firma_start = pdf.get_y()
+        y_firma_start = max(y_after_col1, pdf.get_y())
+        pdf.set_y(y_firma_start)
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
         
