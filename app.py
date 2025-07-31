@@ -10,7 +10,7 @@ from PIL import Image
 def create_checkbox_table(pdf, section_title, items, x_pos):
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 8)
-    pdf.cell(0, 4, section_title, ln=True, border=0)
+    pdf.cell(0, 5, section_title, ln=True, border=0)
     
     # Encabezados de la tabla
     pdf.set_x(x_pos)
@@ -28,7 +28,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 4, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
-    pdf.ln(1)
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -196,7 +195,7 @@ def main():
         canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_clinico")
 
     if st.button("Generar PDF"):
-        pdf = FPDF('L', 'mm', 'A4') # Orientación horizontal 'L'
+        pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
         
         # --- Encabezado ---
@@ -241,7 +240,6 @@ def main():
         y_after_col1 = pdf.get_y()
         
         # Columna Derecha (Items 4, 5, 6, Instrumentos y observaciones)
-        # Sube la columna derecha para que comience a la par con la información de la marca
         pdf.set_y(y_start_columns)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
@@ -254,8 +252,7 @@ def main():
         # --- Sección de Instrumentos de análisis (Columna Derecha) ---
         pdf.set_x(150)
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
-        pdf.ln(1)
+        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
         
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
