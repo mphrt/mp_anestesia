@@ -162,7 +162,7 @@ def main():
             st.session_state.analisis_equipos[i]['equipo'] = st.text_input("Equipo", key=f"equipo_{i}")
             st.session_state.analisis_equipos[i]['marca'] = st.text_input("Marca", key=f"marca_{i}")
             st.session_state.analisis_equipos[i]['modelo'] = st.text_input("Modelo", key=f"modelo_{i}")
-            st.session_state.analisis_equipos[i]['serie'] = st.text_input("N° Serie", key=f"serie_{i}")
+            st.session_state.analisis_equipos[i]['serie'] = st.text_input("Número de Serie", key=f"serie_{i}")
         
         if i > 0:
             with col_btn:
@@ -211,7 +211,7 @@ def main():
         pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(3)
 
-        for label, val in [("MARCA", marca), ("MODELO", modelo), ("S/N", sn), ("N° INVENTARIO", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%d/%m/%Y"))]:
+        for label, val in [("MARCA", marca), ("MODELO", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("UBICACIÓN", ubicacion), ("FECHA", fecha.strftime("%d/%m/%Y"))]:
             pdf.cell(0, 5, f"{label}: {val}", ln=True)
         pdf.ln(3)
 
@@ -232,7 +232,7 @@ def main():
         # Crear la tabla para los equipos de análisis
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             # Encabezados de la tabla
-            pdf.set_fill_color(200, 220, 255)
+            pdf.set_fill_color(240, 240, 240)  # Color gris claro
             pdf.set_font("Arial", "B", 9)
             pdf.cell(50, 6, "Equipo", 1, 0, "C", 1)
             pdf.cell(50, 6, "Marca", 1, 0, "C", 1)
@@ -247,7 +247,6 @@ def main():
                 modelo_equipo = equipo_data.get('modelo', '')
                 serie_equipo = equipo_data.get('serie', '')
                 
-                # Solo añadir la línea si al menos un campo está rellenado
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
                     pdf.cell(50, 6, equipo, 1, 0, "L")
                     pdf.cell(50, 6, marca_equipo, 1, 0, "L")
