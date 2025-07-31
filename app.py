@@ -7,8 +7,13 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
+def get_table_height(section_title, items):
+    # Calcula la altura que ocupará una tabla.
+    # Título (1 línea) + encabezado (1 línea) + filas (1 línea por ítem)
+    # Se añade un pequeño margen
+    return 5 + 5 + (5 * len(items)) + 2
+
 def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
-    # Definir el ancho de las celdas
     item_width = 100
     ok_width = 15
     no_width = 15
@@ -31,16 +36,14 @@ def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
     
     # Filas de la tabla
     for item, value in items:
-        # Aquí forzamos la posición y para cada fila
         pdf.set_xy(x_pos, y_pos)
         pdf.cell(item_width, 5, item, 1)
         pdf.cell(ok_width, 5, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(no_width, 5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(na_width, 5, "X" if value == "N/A" else "", 1, 1, "C")
         y_pos += 5
-
-    y_pos += 2 # Espacio después de la tabla
-    return y_pos
+    
+    return y_pos + 2 # Retornar la posición y para la siguiente tabla
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -225,7 +228,6 @@ def main():
         pdf.ln(3)
         
         pdf.set_font("Arial", "", 10)
-        # Información de la máquina en un bloque
         info_block = [
             f"Marca: {marca}",
             f"Modelo: {modelo}",
@@ -239,25 +241,51 @@ def main():
             pdf.cell(0, 5, line, ln=1)
         pdf.ln(3)
 
-        # Posiciones y dimensiones para las columnas
+        # ----------------------------------------------------
+        # NUEVO ENFOQUE: Distribuir las tablas en dos columnas
+        # ----------------------------------------------------
         x_pos_col1 = 10
         x_pos_col2 = 145
         y_pos_start = pdf.get_y()
-        
-        # Generar las tablas de la primera columna
-        y_pos_col1_end = y_pos_start
-        y_pos_col1_end = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_col1_end)
-        y_pos_col1_end = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos_col1, y_pos_col1_end)
-        y_pos_col1_end = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos_col1, y_pos_col1_end)
-        
-        # Generar las tablas de la segunda columna
-        y_pos_col2_end = y_pos_start
-        y_pos_col2_end = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_col2_end)
-        y_pos_col2_end = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, y_pos_col2_end)
-        y_pos_col2_end = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, y_pos_col2_end)
 
-        # El resto de la información se coloca debajo de las dos columnas
-        max_y = max(y_pos_col1_end, y_pos_col2_end)
+        # 1. Crear una lista de todas las tablas con su altura
+        all_tables = [
+            {"title": "1. Chequeo Visual", "items": chequeo_visual, "height": get_table_height("1. Chequeo Visual", chequeo_visual)},
+            {"title": "2. Sistema de Alta Presión", "items": sistema_alta, "height": get_table_height("2. Sistema de Alta Presión", sistema_alta)},
+            {"title": "3. Sistema de Baja Presión", "items": sistema_baja, "height": get_table_height("3. Sistema de Baja Presión", sistema_baja)},
+            {"title": "4. Sistema absorbedor", "items": sistema_absorbedor, "height": get_table_height("4. Sistema absorbedor", sistema_absorbedor)},
+            {"title": "5. Ventilador mecánico", "items": ventilador_mecanico, "height": get_table_height("5. Ventilador mecánico", ventilador_mecanico)},
+            {"title": "6. Seguridad eléctrica", "items": seguridad_electrica, "height": get_table_height("6. Seguridad eléctrica", seguridad_electrica)},
+        ]
+        
+        # 2. Distribuir las tablas en dos columnas de forma equilibrada
+        col1_tables = []
+        col2_tables = []
+        col1_height = 0
+        col2_height = 0
+        
+        for table in all_tables:
+            if col1_height <= col2_height:
+                col1_tables.append(table)
+                col1_height += table["height"]
+            else:
+                col2_tables.append(table)
+                col2_height += table["height"]
+
+        # 3. Dibujar las tablas en la primera columna
+        y_pos_col1 = y_pos_start
+        for table in col1_tables:
+            y_pos_col1 = create_checkbox_table(pdf, table["title"], table["items"], x_pos_col1, y_pos_col1)
+            
+        # 4. Dibujar las tablas en la segunda columna
+        y_pos_col2 = y_pos_start
+        for table in col2_tables:
+            y_pos_col2 = create_checkbox_table(pdf, table["title"], table["items"], x_pos_col2, y_pos_col2)
+            
+        # ----------------------------------------------------
+        # Continuar con el resto del contenido
+        # ----------------------------------------------------
+        max_y = max(y_pos_col1, y_pos_col2)
         pdf.set_y(max_y)
         
         pdf.set_x(x_pos_col1)
@@ -290,7 +318,6 @@ def main():
         pdf.ln(3)
         pdf.set_x(x_pos_col1)
         pdf.set_font("Arial", "", 10)
-        # Se usa multi_cell para las observaciones
         pdf.multi_cell(0, 4, f"Observaciones: {observaciones}")
         pdf.set_x(x_pos_col1)
         pdf.multi_cell(0, 4, f"Observaciones (uso interno): {observaciones_interno}")
