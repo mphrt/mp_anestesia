@@ -6,11 +6,14 @@ import tempfile
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
+import os
 
 # Coordenadas y anchos para el diseño de dos columnas
 COL1_START = 10
 COL2_START = 105
 COLUMN_WIDTH = 90
+PAGE_WIDTH_MM = 297
+PAGE_HEIGHT_MM = 210
 
 def create_checkbox_table(pdf, section_title, items, column_start_x):
     """Crea una tabla con checkboxes en la columna especificada."""
@@ -31,11 +34,7 @@ def create_checkbox_table(pdf, section_title, items, column_start_x):
     pdf.cell(option_cell_width, 4, "N/A", 1, 1, "C")
 
     for item, value in items:
-        # Si la tabla se acerca al final de la columna, pasa a la segunda o a la siguiente página.
-        # Ajusta este valor si es necesario.
-        if pdf.get_y() > 180 and column_start_x == COL1_START:
-            pdf.set_xy(COL2_START, 35) # Cambia a la segunda columna
-        
+        # Se elimina el control de cambio de columna aquí para manejarlo en la función principal
         pdf.set_x(column_start_x)
         pdf.cell(55, 4, item, 1)
         pdf.cell(option_cell_width, 4, "X" if value == "OK" else "", 1, 0, "C")
@@ -87,14 +86,25 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
         except Exception as e:
             st.error(f"Error al añadir imagen: {e}")
 
+        # Asegurarse de eliminar el archivo temporal
+        os.remove(tmp_path)
+
+
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
-    marca = st.text_input("Marca")
-    modelo = st.text_input("Modelo")
-    sn = st.text_input("Número de Serie")
-    inventario = st.text_input("Número de Inventario")
-    fecha = st.date_input("Fecha", value=datetime.date.today())
-    ubicacion = st.text_input("Ubicación")
+    st.markdown("---")
+
+    col_info1, col_info2 = st.columns(2)
+    with col_info1:
+        marca = st.text_input("Marca")
+        sn = st.text_input("Número de Serie")
+        ubicacion = st.text_input("Ubicación")
+    with col_info2:
+        modelo = st.text_input("Modelo")
+        inventario = st.text_input("Número de Inventario")
+        fecha = st.date_input("Fecha", value=datetime.date.today())
+
+    st.markdown("---")
 
     def checklist(title, items):
         st.subheader(title)
@@ -104,65 +114,70 @@ def main():
             with col1:
                 st.markdown(item)
             with col2:
-                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
+                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=f"{title}_{item}")
             respuestas.append((item, seleccion))
         return respuestas
 
-    chequeo_visual = checklist("1. Chequeo Visual", [
-        "1.1. Carcasa Frontal y Trasera",
-        "1.2. Estado de Software",
-        "1.3. Panel frontal",
-        "1.4. Batería de respaldo"
-    ])
+    col_check1, col_check2 = st.columns(2)
 
-    sistema_alta = checklist("2. Sistema de Alta Presión", [
-        "2.1. Chequeo de yugo de O2, N2O, Aire",
-        "2.2. Revisión o reemplazo de empaquetadura de yugo",
-        "2.3. Verificación de entrada de presión",
-        "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"
-    ])
+    with col_check1:
+        chequeo_visual = checklist("1. Chequeo Visual", [
+            "1.1. Carcasa Frontal y Trasera",
+            "1.2. Estado de Software",
+            "1.3. Panel frontal",
+            "1.4. Batería de respaldo"
+        ])
 
-    sistema_baja = checklist("3. Sistema de baja presión", [
-        "3.1. Revisión y calibración de válvula de flujómetro de N2O",
-        "3.2. Revisión y calibración de válvula de flujometro de O2",
-        "3.3. Revisión y calibración de válvula de flujometro de Aire",
-        "3.4. Chequeo de fugas",
-        "3.5. Verificación de flujos",
-        "3.6. Verificación de regulador de 2da etapa",
-        "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
-        "3.8. Revisión de sistema proporción de O2/N2O",
-        "3.9. Revisión de manifold de vaporizadores"
-    ])
+        sistema_alta = checklist("2. Sistema de Alta Presión", [
+            "2.1. Chequeo de yugo de O2, N2O, Aire",
+            "2.2. Revisión o reemplazo de empaquetadura de yugo",
+            "2.3. Verificación de entrada de presión",
+            "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"
+        ])
 
-    sistema_absorbedor = checklist("4. Sistema absorbedor", [
-        "4.1. Revisión o reemplazo de empaquetadura de canister",
-        "4.2. Revisión de válvula APL",
-        "4.3. Verificación de manómetro de presión de vía aérea",
-        "4.4. Revisión de válvula inhalatoria",
-        "4.5. Revisión de válvula exhalatoria",
-        "4.6. Chequeo de fugas",
-        "4.7. Hermeticidad"
-    ])
+        sistema_baja = checklist("3. Sistema de Baja Presión", [
+            "3.1. Revisión y calibración de válvula de flujómetro de N2O",
+            "3.2. Revisión y calibración de válvula de flujometro de O2",
+            "3.3. Revisión y calibración de válvula de flujometro de Aire",
+            "3.4. Chequeo de fugas",
+            "3.5. Verificación de flujos",
+            "3.6. Verificación de regulador de 2da etapa",
+            "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
+            "3.8. Revisión de sistema proporción de O2/N2O",
+            "3.9. Revisión de manifold de vaporizadores"
+        ])
 
-    ventilador_mecanico = checklist("5. Ventilador mecánico", [
-        "5.1. Porcentaje de oxígeno",
-        "5.2. Volumen corriente y volumen minuto",
-        "5.3. Presión de vía aérea",
-        "5.4. Frecuencia respiratoria",
-        "5.5. Modo ventilatorio",
-        "5.6. Alarmas",
-        "5.7. Calibración de celda de oxígeno a 21% y al 100%",
-        "5.8. Calibración de sensores de flujo"
-    ])
+    with col_check2:
+        sistema_absorbedor = checklist("4. Sistema absorbedor", [
+            "4.1. Revisión o reemplazo de empaquetadura de canister",
+            "4.2. Revisión de válvula APL",
+            "4.3. Verificación de manómetro de presión de vía aérea",
+            "4.4. Revisión de válvula inhalatoria",
+            "4.5. Revisión de válvula exhalatoria",
+            "4.6. Chequeo de fugas",
+            "4.7. Hermeticidad"
+        ])
 
-    seguridad_electrica = checklist("6. Seguridad eléctrica", [
-        "6.1. Corriente de fuga",
-        "6.2. Tierra de protección",
-        "6.3. Aislación"
-    ])
+        ventilador_mecanico = checklist("5. Ventilador mecánico", [
+            "5.1. Porcentaje de oxígeno",
+            "5.2. Volumen corriente y volumen minuto",
+            "5.3. Presión de vía aérea",
+            "5.4. Frecuencia respiratoria",
+            "5.5. Modo ventilatorio",
+            "5.6. Alarmas",
+            "5.7. Calibración de celda de oxígeno a 21% y al 100%",
+            "5.8. Calibración de sensores de flujo"
+        ])
 
+        seguridad_electrica = checklist("6. Seguridad eléctrica", [
+            "6.1. Corriente de fuga",
+            "6.2. Tierra de protección",
+            "6.3. Aislación"
+        ])
+    
+    st.markdown("---")
+    
     st.subheader("7. Instrumentos de análisis")
-
     if 'analisis_equipos' not in st.session_state:
         st.session_state.analisis_equipos = [{}]
 
@@ -187,6 +202,8 @@ def main():
     
     st.button("Agregar Equipo +", on_click=add_equipo)
 
+    st.markdown("---")
+
     observaciones = st.text_area("Observaciones")
     observaciones_interno = st.text_area("Observaciones (uso interno)")
     operativo = st.radio("¿Equipo operativo?", ["SI", "NO"])
@@ -210,7 +227,6 @@ def main():
 
 
     if st.button("Generar PDF"):
-        # Se cambia el formato a horizontal ('L') y el tamaño de página A4
         pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         
@@ -233,7 +249,6 @@ def main():
         pdf.set_xy(10, 25)
         pdf.set_font("Arial", "", 8)
         
-        # Información del equipo en dos columnas
         pdf.set_x(10)
         pdf.cell(45, 4, f"Marca: {marca}")
         pdf.set_x(100)
@@ -253,9 +268,8 @@ def main():
         
         # Posición inicial para las tablas de la primera columna
         pdf.set_y(35)
-        pdf.set_x(COL1_START)
-
-        # Tablas de la primera columna
+        
+        # Crea todas las tablas de la primera columna
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, COL1_START)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, COL1_START)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, COL1_START)
@@ -263,29 +277,30 @@ def main():
         # Mover el cursor a la segunda columna para las siguientes tablas
         pdf.set_xy(COL2_START, 35)
 
-        # Tablas de la segunda columna
+        # Crea todas las tablas de la segunda columna
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, COL2_START)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, COL2_START)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, COL2_START)
         
-        # Posicionar el resto de la información debajo de las columnas
-        pdf.set_y(pdf.get_y() + 2)
-        pdf.set_x(COL2_START)
+        # Añadir una nueva página para las firmas
+        pdf.add_page()
         
         # 7. Instrumentos de análisis
+        pdf.set_y(20)
+        pdf.set_x(10)
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
-        pdf.set_x(COL2_START)
+        pdf.set_x(10)
         pdf.set_font("Arial", "", 7)
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             # Encabezados de la tabla
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 7)
-            pdf.set_x(COL2_START)
-            pdf.cell(20, 4, "Equipo", 1, 0, "C", 1)
-            pdf.cell(20, 4, "Marca", 1, 0, "C", 1)
-            pdf.cell(20, 4, "Modelo", 1, 0, "C", 1)
-            pdf.cell(20, 4, "N° Serie", 1, 1, "C", 1)
+            pdf.set_x(10)
+            pdf.cell(50, 4, "Equipo", 1, 0, "C", 1)
+            pdf.cell(50, 4, "Marca", 1, 0, "C", 1)
+            pdf.cell(50, 4, "Modelo", 1, 0, "C", 1)
+            pdf.cell(50, 4, "N° Serie", 1, 1, "C", 1)
             
             pdf.set_font("Arial", "", 7)
             for equipo_data in st.session_state.analisis_equipos:
@@ -295,37 +310,50 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.set_x(COL2_START)
-                    pdf.cell(20, 4, equipo, 1, 0, "L")
-                    pdf.cell(20, 4, marca_equipo, 1, 0, "L")
-                    pdf.cell(20, 4, modelo_equipo, 1, 0, "L")
-                    pdf.cell(20, 4, serie_equipo, 1, 1, "L")
+                    pdf.set_x(10)
+                    pdf.cell(50, 4, equipo, 1, 0, "L")
+                    pdf.cell(50, 4, marca_equipo, 1, 0, "L")
+                    pdf.cell(50, 4, modelo_equipo, 1, 0, "L")
+                    pdf.cell(50, 4, serie_equipo, 1, 1, "L")
 
-        pdf.ln(1)
-        pdf.set_x(COL2_START)
-        pdf.set_font("Arial", "", 7)
-        pdf.multi_cell(COLUMN_WIDTH, 3, f"Observaciones: {observaciones}")
-        pdf.set_x(COL2_START)
-        pdf.multi_cell(COLUMN_WIDTH, 3, f"Observaciones (uso interno): {observaciones_interno}")
-        pdf.set_x(COL2_START)
-        pdf.cell(0, 3, f"Equipo Operativo: {operativo}", ln=True)
-        pdf.set_x(COL2_START)
-        pdf.cell(0, 3, f"Nombre Técnico: {tecnico}", ln=True)
-        pdf.set_x(COL2_START)
-        pdf.cell(0, 3, f"Empresa Responsable: {empresa}", ln=True)
+        pdf.ln(2)
+        pdf.set_x(10)
+        pdf.set_font("Arial", "", 8)
+        pdf.multi_cell(PAGE_WIDTH_MM - 20, 4, f"Observaciones: {observaciones}")
+        pdf.set_x(10)
+        pdf.multi_cell(PAGE_WIDTH_MM - 20, 4, f"Observaciones (uso interno): {observaciones_interno}")
+        pdf.set_x(10)
+        pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
+        pdf.set_x(10)
+        pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", ln=True)
+        pdf.set_x(10)
+        pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
         
         pdf.ln(5)
         
         # Posiciones de las firmas
-        x_positions_for_signature_area = [25, 115, 205]
-        y_firma_start = 185
+        # Se ajusta para que queden centradas en la página
+        x_positions_for_signature_area = [
+            (PAGE_WIDTH_MM / 4) - 30, # Primera firma centrada en el primer cuarto
+            (PAGE_WIDTH_MM / 2) - 30, # Segunda firma centrada en la mitad
+            (PAGE_WIDTH_MM * 3 / 4) - 30 # Tercera firma centrada en el tercer cuarto
+        ]
+        y_firma_start = pdf.get_y() + 10
         y_firma_image = y_firma_start + 2
         y_firma_text = y_firma_image + 20
         
+        # Dibuja los cuadros de firma
+        pdf.set_draw_color(0, 0, 0)
+        pdf.set_line_width(0.2)
+        for x_pos in x_positions_for_signature_area:
+             pdf.rect(x_pos, y_firma_start, 60, 30)
+
+        # Añade las imágenes de las firmas
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
         
+        # Añade el texto de las firmas
         pdf.set_font("Arial", "", 8)
         pdf.set_y(y_firma_text)
         pdf.set_x(x_positions_for_signature_area[0])
