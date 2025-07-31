@@ -256,7 +256,6 @@ def main():
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 6)
             pdf.set_x(160)
-            # Se ajustan las dimensiones de las celdas para que sumen 115 mm
             pdf.cell(34, 3.5, "Equipo", 1, 0, "C", 1)
             pdf.cell(27, 3.5, "Marca", 1, 0, "C", 1)
             pdf.cell(27, 3.5, "Modelo", 1, 0, "C", 1)
@@ -271,7 +270,6 @@ def main():
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
                     pdf.set_x(160)
-                    # Se ajustan las dimensiones de las celdas de datos para que coincidan
                     pdf.cell(34, 3.5, equipo, 1, 0, "L")
                     pdf.cell(27, 3.5, marca_equipo, 1, 0, "L")
                     pdf.cell(27, 3.5, modelo_equipo, 1, 0, "L")
@@ -285,7 +283,8 @@ def main():
         pdf.cell(0, 3.5, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 7)
         pdf.set_x(160)
-        pdf.multi_cell(0, 3.5, f"{observaciones}")
+        # Se define un ancho de 115mm para que el texto se alinee con las tablas
+        pdf.multi_cell(115, 3.5, f"{observaciones}")
         pdf.ln(1)
         
         pdf.set_x(160)
@@ -293,7 +292,8 @@ def main():
         pdf.cell(0, 3.5, "Observaciones (uso interno):", ln=True)
         pdf.set_font("Arial", "", 7)
         pdf.set_x(160)
-        pdf.multi_cell(0, 3.5, f"{observaciones_interno}")
+        # Se define un ancho de 115mm para que el texto se alinee con las tablas
+        pdf.multi_cell(115, 3.5, f"{observaciones_interno}")
         pdf.ln(1)
         
         pdf.set_x(160)
