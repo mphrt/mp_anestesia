@@ -217,7 +217,7 @@ def main():
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
         # Guardamos la posición Y para alinear las dos columnas
-        y_column_start = pdf.get_y() + 5  # Añadimos un pequeño espacio para que no quede pegado
+        y_column_start = pdf.get_y() + 5  # Un pequeño espacio para que no quede pegado
         
         # --- COLUMNA IZQUIERDA ---
         pdf.set_y(y_column_start)
