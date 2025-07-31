@@ -7,26 +7,31 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items):
-    if pdf.get_y() > 260:
-        pdf.add_page()
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 5, section_title, ln=True)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(140, 5, "", 0)
-    pdf.cell(15, 5, "OK", 1, 0, "C")
-    pdf.cell(15, 5, "NO", 1, 0, "C")
-    pdf.cell(15, 5, "N/A", 1, 1, "C")
+# --- Funciones auxiliares modificadas para el formato horizontal ---
+
+def create_checkbox_table(pdf, section_title, items, x_pos):
+    # La orientación horizontal tiene más espacio, por lo que podemos crear columnas
+    pdf.set_x(x_pos)
+    pdf.set_font("Arial", "B", 8)  # Fuente más pequeña para ahorrar espacio
+    pdf.cell(0, 4, section_title, ln=True, align="L")
+    pdf.set_x(x_pos)
+    pdf.set_font("Arial", "", 8)
+    # Ajustar ancho de las celdas para que quepan dos tablas lado a lado
+    ancho_item = 85
+    ancho_check = 10
+    pdf.cell(ancho_item, 4, "", 0)
+    pdf.cell(ancho_check, 4, "OK", 1, 0, "C")
+    pdf.cell(ancho_check, 4, "NO", 1, 0, "C")
+    pdf.cell(ancho_check, 4, "N/A", 1, 1, "C")
     for item, value in items:
-        if pdf.get_y() > 270:
-            pdf.add_page()
-        pdf.cell(140, 5, item, 1)
-        pdf.cell(15, 5, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(15, 5, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(15, 5, "X" if value == "N/A" else "", 1, 1, "C")
+        pdf.set_x(x_pos)
+        pdf.cell(ancho_item, 4, item, 1)
+        pdf.cell(ancho_check, 4, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(ancho_check, 4, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(ancho_check, 4, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(2)
 
-def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
+def add_signature_to_pdf(pdf_obj, canvas_result, x, y):
     if canvas_result.image_data is not None:
         img_array = canvas_result.image_data.astype(np.uint8)
         img = Image.fromarray(img_array)
@@ -54,21 +59,24 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
             tmp_file.write(img_byte_arr.read())
             tmp_path = tmp_file.name
         
-        desired_img_width_mm = 50
+        # Ajustar dimensiones de la firma para el formato horizontal
+        desired_img_width_mm = 40
         img_height_mm = (cropped_img.height / cropped_img.width) * desired_img_width_mm
         
-        max_height = 30
+        max_height = 20
         if img_height_mm > max_height:
             img_height_mm = max_height
             desired_img_width_mm = (cropped_img.width / cropped_img.height) * img_height_mm
 
-        center_of_area_x = x_start_of_box + (60 / 2)
+        center_of_area_x = x + (60 / 2)
         image_x = center_of_area_x - (desired_img_width_mm / 2)
         
         try:
             pdf_obj.image(tmp_path, x=image_x, y=y, w=desired_img_width_mm, h=img_height_mm)
         except Exception as e:
             st.error(f"Error al añadir imagen: {e}")
+
+# --- La función principal 'main' se mantiene casi igual, solo se modifica la parte de generación del PDF ---
 
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -146,15 +154,12 @@ def main():
 
     st.subheader("7. Instrumentos de análisis")
 
-    # Inicializar una lista para los equipos de análisis
     if 'analisis_equipos' not in st.session_state:
         st.session_state.analisis_equipos = [{}]
 
-    # Función para agregar un nuevo equipo de análisis
     def add_equipo():
         st.session_state.analisis_equipos.append({})
 
-    # Mostrar formularios para cada equipo en la lista
     for i, equipo_data in enumerate(st.session_state.analisis_equipos):
         st.markdown(f"**Equipo {i+1}**")
         col_eq, col_btn = st.columns([0.9, 0.1])
@@ -196,9 +201,11 @@ def main():
 
 
     if st.button("Generar PDF"):
-        pdf = FPDF()
+        # Se cambia la orientación de la página a 'L' (Landscape)
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         try:
+            # Ajustar la posición del logo para el formato horizontal
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=45)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
@@ -211,36 +218,57 @@ def main():
         pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(3)
 
-        for label, val in [("Marca", marca), ("Modelo", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("Ubicación", ubicacion), ("Fecha", fecha.strftime("%d/%m/%Y"))]:
-            pdf.cell(0, 5, f"{label}: {val}", ln=True)
-        pdf.ln(3)
+        # Usar dos columnas para los datos de la máquina
+        pdf.set_font("Arial", "", 9)
+        pdf.set_x(10)
+        pdf.cell(100, 4, f"Marca: {marca}")
+        pdf.cell(100, 4, f"Ubicación: {ubicacion}", ln=True)
+        pdf.set_x(10)
+        pdf.cell(100, 4, f"Modelo: {modelo}")
+        pdf.cell(100, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", ln=True)
+        pdf.set_x(10)
+        pdf.cell(100, 4, f"Número de Serie: {sn}", ln=True)
+        pdf.set_x(10)
+        pdf.cell(100, 4, f"Número de Inventario: {inventario}", ln=True)
 
-        for title, data in [
-            ("1. Chequeo Visual", chequeo_visual),
-            ("2. Sistema de Alta Presión", sistema_alta),
-            ("3. Sistema de Baja Presión", sistema_baja),
-            ("4. Sistema absorbedor", sistema_absorbedor),
-            ("5. Ventilador mecánico", ventilador_mecanico),
-            ("6. Seguridad eléctrica", seguridad_electrica)
-        ]:
-            create_checkbox_table(pdf, title, data)
+        pdf.ln(3)
+        
+        # --- Dividir las tablas en dos columnas ---
+        
+        # Guardar la posición Y inicial para la alineación
+        y_start_tables = pdf.get_y()
+        
+        # Columna izquierda
+        pdf.set_y(y_start_tables)
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, 10)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, 10)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, 10)
+        
+        # Columna derecha
+        pdf.set_y(y_start_tables)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, 150)
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, 150)
+        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, 150)
+
+        # Ajustar la posición Y para la siguiente sección
+        pdf.set_y(max(pdf.get_y(), y_start_tables + 80))
+        pdf.set_x(10)
 
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font("Arial", "", 9)
 
-        # Crear la tabla para los equipos de análisis
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
-            # Encabezados de la tabla
-            pdf.set_fill_color(240, 240, 240)  # Color gris claro
-            pdf.set_font("Arial", "B", 9)
-            pdf.cell(50, 6, "Equipo", 1, 0, "C", 1)
-            pdf.cell(50, 6, "Marca", 1, 0, "C", 1)
-            pdf.cell(50, 6, "Modelo", 1, 0, "C", 1)
-            pdf.cell(40, 6, "N° Serie", 1, 1, "C", 1)
+            pdf.set_fill_color(240, 240, 240)
+            pdf.set_font("Arial", "B", 8)
+            # Ajustar anchos para que quepan en la página horizontal
+            ancho_col_analisis = 55
+            pdf.cell(ancho_col_analisis, 5, "Equipo", 1, 0, "C", 1)
+            pdf.cell(ancho_col_analisis, 5, "Marca", 1, 0, "C", 1)
+            pdf.cell(ancho_col_analisis, 5, "Modelo", 1, 0, "C", 1)
+            pdf.cell(ancho_col_analisis, 5, "N° Serie", 1, 1, "C", 1)
             
-            # Contenido de la tabla
-            pdf.set_font("Arial", "", 9)
+            pdf.set_font("Arial", "", 8)
             for equipo_data in st.session_state.analisis_equipos:
                 equipo = equipo_data.get('equipo', '')
                 marca_equipo = equipo_data.get('marca', '')
@@ -248,22 +276,23 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.cell(50, 6, equipo, 1, 0, "L")
-                    pdf.cell(50, 6, marca_equipo, 1, 0, "L")
-                    pdf.cell(50, 6, modelo_equipo, 1, 0, "L")
-                    pdf.cell(40, 6, serie_equipo, 1, 1, "L")
+                    pdf.cell(ancho_col_analisis, 5, equipo, 1, 0, "L")
+                    pdf.cell(ancho_col_analisis, 5, marca_equipo, 1, 0, "L")
+                    pdf.cell(ancho_col_analisis, 5, modelo_equipo, 1, 0, "L")
+                    pdf.cell(ancho_col_analisis, 5, serie_equipo, 1, 1, "L")
 
         pdf.ln(3)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font("Arial", "", 9)
         pdf.multi_cell(0, 4, f"Observaciones: {observaciones}")
         pdf.multi_cell(0, 4, f"Observaciones (uso interno): {observaciones_interno}")
         pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
         pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", ln=True)
         pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
         
-        pdf.ln(10)
+        pdf.ln(5)
         
-        x_positions_for_signature_area = [15, 80, 145]
+        # Ajustar la posición y los espacios de las firmas
+        x_positions_for_signature_area = [25, 115, 205]
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         
@@ -271,7 +300,7 @@ def main():
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
 
-        y_firma_text = y_firma_image + 30
+        y_firma_text = y_firma_image + 20
         
         pdf.set_y(y_firma_text)
         pdf.set_x(x_positions_for_signature_area[0])
