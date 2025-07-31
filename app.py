@@ -7,11 +7,17 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items, x_pos=10):
-    # Verificar si hay espacio suficiente antes de agregar la tabla
-    if pdf.get_y() > 170:
+def create_checkbox_table(pdf, section_title, items, x_pos=10, y_start=None):
+    if y_start:
+        pdf.set_y(y_start)
+    
+    # Verificar si hay espacio suficiente antes de agregar la tabla.
+    # El espacio mínimo es el tamaño de la tabla + un margen.
+    required_height = 4 + 4 + (len(items) * 4) + 1 # Título, encabezado, filas, espacio
+    
+    if pdf.get_y() + required_height > pdf.h - 20: # 20mm de margen inferior
         pdf.add_page(orientation='L')
-        pdf.set_y(20)  # Reajustar la posición y si se añade una nueva página
+        pdf.set_y(20)
 
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 8)
@@ -34,6 +40,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos=10):
         pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(1)
+    return pdf.get_y()
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -234,22 +241,28 @@ def main():
 
         # Checklists
         y_col1 = pdf.get_y()
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
-        
-        # Posición para la segunda columna de checklists
         y_col2 = y_col1
-        pdf.set_y(y_col2)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
-        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
+        
+        # Columna 1
+        y_after_col1 = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10, y_start=y_col1)
+        y_after_col1 = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
+        y_after_col1 = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
+        
+        # Columna 2
+        pdf.set_y(y_col2) # Reiniciar la posición y para la segunda columna
+        y_after_col2 = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150, y_start=y_col2)
+        y_after_col2 = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
+        y_after_col2 = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
         
         # Ajustar la posición vertical después de las dos columnas de checklists
-        y_next = max(pdf.get_y(), y_col1 + len(chequeo_visual + sistema_alta + sistema_baja) * 5)
+        y_next = max(y_after_col1, y_after_col2)
         pdf.set_y(y_next + 2)
-
+        
         # Sección de Instrumentos de análisis
+        if pdf.get_y() > pdf.h - 80: # Verificar si hay espacio suficiente para la siguiente sección
+            pdf.add_page(orientation='L')
+            pdf.set_y(20)
+
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         pdf.ln(1)
@@ -275,17 +288,36 @@ def main():
                     pdf.cell(40, 4, modelo_equipo, 1, 0, "L")
                     pdf.cell(40, 4, serie_equipo, 1, 1, "L")
         
-        pdf.ln(2)
+        # Sección de observaciones y firmas
+        current_y = pdf.get_y()
+        if current_y > pdf.h - 60: # Margen para observaciones y firmas
+            pdf.add_page(orientation='L')
+            pdf.set_y(20)
+        else:
+            pdf.ln(2)
+
         pdf.set_font("Arial", "", 8)
         
-        pdf.multi_cell(0, 3, f"Observaciones: {observaciones}")
-        pdf.multi_cell(0, 3, f"Observaciones (uso interno): {observaciones_interno}")
+        # Observaciones como celdas de altura dinámica
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 4, "Observaciones:", ln=True)
+        pdf.set_font("Arial", "", 8)
+        pdf.multi_cell(0, 4, f"{observaciones}")
+        pdf.ln(1)
+        
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 4, "Observaciones (uso interno):", ln=True)
+        pdf.set_font("Arial", "", 8)
+        pdf.multi_cell(0, 4, f"{observaciones_interno}")
+        pdf.ln(1)
+        
         pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
         pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", 0, 0)
         pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
         
         pdf.ln(5)
         
+        # Firmas
         x_positions_for_signature_area = [25, 120, 215]
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
