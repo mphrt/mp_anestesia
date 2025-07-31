@@ -303,11 +303,12 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
 
-        pdf.ln(5)
+        # A partir de aquí se mueve la sección de firmas
+        pdf.ln(5) # Añade un espacio después del texto de la empresa
         
         # Firmas
-        y_firma_start = max(y_after_col1, pdf.get_y())
-        pdf.set_y(y_firma_start)
+        # Se establece la posición Y actual como el inicio del área de firmas
+        y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
         
@@ -315,6 +316,7 @@ def main():
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
 
+        # La posición del texto de la firma se basa en la Y de inicio
         y_firma_text = y_firma_start + 25
         
         pdf.set_y(y_firma_text)
