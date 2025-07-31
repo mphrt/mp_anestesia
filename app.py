@@ -8,11 +8,6 @@ import numpy as np
 from PIL import Image
 
 def create_checkbox_table(pdf, section_title, items, x_pos=10):
-    # Verificar si hay espacio suficiente antes de agregar la tabla
-    if pdf.get_y() > 170:
-        pdf.add_page(orientation='L')
-        pdf.set_y(20)  # Reajustar la posición y si se añade una nueva página
-
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 8)
     pdf.cell(0, 4, section_title, ln=True, border=0)
@@ -55,7 +50,7 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
         if cropped_img.mode == 'RGBA':
             cropped_img = cropped_img.convert('RGB')
         
-        img_byte_arr = io.BytesIO()
+        img_byte_arr = io.Bytesio()
         cropped_img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
@@ -200,6 +195,7 @@ def main():
         st.write("Personal Clínico:")
         canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_clinico")
 
+
     if st.button("Generar PDF"):
         pdf = FPDF('L', 'mm', 'A4') # Orientación horizontal 'L'
         pdf.add_page()
@@ -232,21 +228,20 @@ def main():
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(1)
 
-        # Checklists
-        y_col1 = pdf.get_y()
+        # Checklists en dos columnas
+        y_col1_start = pdf.get_y()
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
-        
-        # Posición para la segunda columna de checklists
-        y_col2 = y_col1
-        pdf.set_y(y_col2)
+        y_col1_end = pdf.get_y()
+
+        pdf.set_y(y_col1_start)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
+        y_col2_end = pdf.get_y()
         
-        # Ajustar la posición vertical después de las dos columnas de checklists
-        y_next = max(pdf.get_y(), y_col1 + len(chequeo_visual + sistema_alta + sistema_baja) * 5)
+        y_next = max(y_col1_end, y_col2_end)
         pdf.set_y(y_next + 2)
 
         # Sección de Instrumentos de análisis
@@ -278,8 +273,18 @@ def main():
         pdf.ln(2)
         pdf.set_font("Arial", "", 8)
         
+        # Información final y firmas
+        # Usamos una posición inicial ajustada para las observaciones
+        y_obs_start = pdf.get_y()
+        pdf.set_y(y_obs_start)
         pdf.multi_cell(0, 3, f"Observaciones: {observaciones}")
+        
+        y_obs_end = pdf.get_y()
+        pdf.set_y(y_obs_end)
         pdf.multi_cell(0, 3, f"Observaciones (uso interno): {observaciones_interno}")
+        
+        y_info_end = pdf.get_y()
+        pdf.set_y(y_info_end)
         pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
         pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", 0, 0)
         pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
