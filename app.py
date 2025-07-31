@@ -10,7 +10,7 @@ from PIL import Image
 def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
     """
     Crea una tabla de chequeo en una posición x_pos y y_pos específica.
-    Se ajustan los tamaños de las celdas para el formato horizontal y compactar el contenido.
+    Se ajustan los tamaños de las celdas para el formato horizontal y compacto.
     """
     pdf.set_xy(x_pos, y_pos)
     pdf.set_font("Arial", "B", 8)
@@ -180,13 +180,16 @@ def main():
         canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_clinico")
 
     if st.button("Generar PDF"):
+        # Se cambia la orientación de la página a 'L' (Landscape)
         pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         try:
+            # Reducir el tamaño del logo para ahorrar espacio
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
+        # Títulos del encabezado con fuentes más pequeñas
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
         pdf.set_font("Arial", "", 8)
@@ -195,7 +198,7 @@ def main():
         pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(2)
 
-        # Datos de la máquina en dos columnas
+        # Datos de la máquina en dos columnas para aprovechar el espacio
         pdf.set_font("Arial", "", 8)
         pdf.set_x(10)
         pdf.cell(100, 3.5, f"Marca: {marca}")
@@ -209,7 +212,7 @@ def main():
         pdf.cell(100, 3.5, f"Número de Inventario: {inventario}", ln=True)
         pdf.ln(2)
         
-        # Tablas en dos columnas
+        # Tablas en dos columnas para optimizar el espacio vertical
         y_pos_col1 = pdf.get_y()
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, 10, y_pos_col1)
         y_pos_col1 = pdf.get_y()
@@ -217,14 +220,16 @@ def main():
         y_pos_col1 = pdf.get_y()
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, 10, y_pos_col1)
         
+        # Columna de la derecha, iniciando a la misma altura que la de la izquierda
         y_pos_col2 = pdf.get_y()
+        pdf.set_y(y_pos_col2)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, 150, y_pos_col2)
         y_pos_col2 = pdf.get_y()
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, 150, y_pos_col2)
         y_pos_col2 = pdf.get_y()
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, 150, y_pos_col2)
 
-        # Ajustar la posición Y para la sección de observaciones y firmas
+        # Posicionar el siguiente contenido debajo de la columna más larga
         pdf.set_y(max(y_pos_col1, y_pos_col2) + 15)
         pdf.set_x(10)
 
