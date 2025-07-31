@@ -199,7 +199,6 @@ def main():
         pdf.add_page()
         
         # --- ENCABEZADO Y TÍTULOS CENTRADOS ---
-        # Se ajusta la posición del logo para que inicie en el nuevo margen de 22mm
         try:
             pdf.image("logo_hrt_final.jpg", x=22, y=6, w=40)
         except Exception as e:
@@ -209,7 +208,6 @@ def main():
         pdf.set_y(y_title_start)
         
         pdf.set_font("Arial", "B", 9)
-        # Se centra el texto con cell(0, 4, ..., align='C')
         pdf.cell(0, 4, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
         
         pdf.set_font("Arial", "", 7)
@@ -258,10 +256,11 @@ def main():
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 6)
             pdf.set_x(160)
-            pdf.cell(30, 3.5, "Equipo", 1, 0, "C", 1)
-            pdf.cell(25, 3.5, "Marca", 1, 0, "C", 1)
-            pdf.cell(25, 3.5, "Modelo", 1, 0, "C", 1)
-            pdf.cell(25, 3.5, "N° Serie", 1, 1, "C", 1)
+            # Se ajustan las dimensiones de las celdas para que sumen 115 mm
+            pdf.cell(34, 3.5, "Equipo", 1, 0, "C", 1)
+            pdf.cell(27, 3.5, "Marca", 1, 0, "C", 1)
+            pdf.cell(27, 3.5, "Modelo", 1, 0, "C", 1)
+            pdf.cell(27, 3.5, "N° Serie", 1, 1, "C", 1)
             
             pdf.set_font("Arial", "", 6)
             for equipo_data in st.session_state.analisis_equipos:
@@ -272,10 +271,11 @@ def main():
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
                     pdf.set_x(160)
-                    pdf.cell(30, 3.5, equipo, 1, 0, "L")
-                    pdf.cell(25, 3.5, marca_equipo, 1, 0, "L")
-                    pdf.cell(25, 3.5, modelo_equipo, 1, 0, "L")
-                    pdf.cell(25, 3.5, serie_equipo, 1, 1, "L")
+                    # Se ajustan las dimensiones de las celdas de datos para que coincidan
+                    pdf.cell(34, 3.5, equipo, 1, 0, "L")
+                    pdf.cell(27, 3.5, marca_equipo, 1, 0, "L")
+                    pdf.cell(27, 3.5, modelo_equipo, 1, 0, "L")
+                    pdf.cell(27, 3.5, serie_equipo, 1, 1, "L")
         
         pdf.ln(2)
 
