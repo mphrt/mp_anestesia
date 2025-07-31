@@ -74,8 +74,8 @@ def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
-    sn = st.text_input("S/N")
-    inventario = st.text_input("N° Inventario")
+    sn = st.text_input("Número de Serie")
+    inventario = st.text_input("Número de Inventario")
     fecha = st.date_input("Fecha", value=datetime.date.today())
     ubicacion = st.text_input("Ubicación")
 
@@ -164,15 +164,14 @@ def main():
             st.session_state.analisis_equipos[i]['modelo'] = st.text_input("Modelo", key=f"modelo_{i}")
             st.session_state.analisis_equipos[i]['serie'] = st.text_input("N° Serie", key=f"serie_{i}")
         
-        # Eliminar el botón de "Eliminar" para el primer equipo si solo hay uno
         if i > 0:
             with col_btn:
-                st.write("") # Add a little space
-                st.button("−", key=f"remove_btn_{i}", on_click=lambda idx=i: st.session_state.analisis_equipos.pop(idx))
+                st.write("")
+                if st.button("−", key=f"remove_btn_{i}"):
+                    st.session_state.analisis_equipos.pop(i)
+                    st.experimental_rerun()
     
-    # Botón para añadir más equipos
     st.button("Agregar Equipo +", on_click=add_equipo)
-
 
     observaciones = st.text_area("Observaciones")
     observaciones_interno = st.text_area("Observaciones (uso interno)")
@@ -229,16 +228,31 @@ def main():
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
         pdf.set_font("Arial", "", 10)
-        # Bucle para añadir dinámicamente los equipos al PDF
-        for equipo_data in st.session_state.analisis_equipos:
-            equipo = equipo_data.get('equipo', '')
-            marca_equipo = equipo_data.get('marca', '')
-            modelo_equipo = equipo_data.get('modelo', '')
-            serie_equipo = equipo_data.get('serie', '')
+
+        # Crear la tabla para los equipos de análisis
+        if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
+            # Encabezados de la tabla
+            pdf.set_fill_color(200, 220, 255)
+            pdf.set_font("Arial", "B", 9)
+            pdf.cell(50, 6, "Equipo", 1, 0, "C", 1)
+            pdf.cell(50, 6, "Marca", 1, 0, "C", 1)
+            pdf.cell(50, 6, "Modelo", 1, 0, "C", 1)
+            pdf.cell(40, 6, "N° Serie", 1, 1, "C", 1)
             
-            # Solo añadir la línea si al menos un campo está rellenado
-            if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                pdf.cell(0, 5, f"Equipo: {equipo} | Marca: {marca_equipo} | Modelo: {modelo_equipo} | N° Serie: {serie_equipo}", ln=True)
+            # Contenido de la tabla
+            pdf.set_font("Arial", "", 9)
+            for equipo_data in st.session_state.analisis_equipos:
+                equipo = equipo_data.get('equipo', '')
+                marca_equipo = equipo_data.get('marca', '')
+                modelo_equipo = equipo_data.get('modelo', '')
+                serie_equipo = equipo_data.get('serie', '')
+                
+                # Solo añadir la línea si al menos un campo está rellenado
+                if equipo or marca_equipo or modelo_equipo or serie_equipo:
+                    pdf.cell(50, 6, equipo, 1, 0, "L")
+                    pdf.cell(50, 6, marca_equipo, 1, 0, "L")
+                    pdf.cell(50, 6, modelo_equipo, 1, 0, "L")
+                    pdf.cell(40, 6, serie_equipo, 1, 1, "L")
 
         pdf.ln(3)
         pdf.set_font("Arial", "", 10)
