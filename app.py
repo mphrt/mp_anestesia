@@ -218,9 +218,10 @@ def main():
         
         pdf.ln(10)
 
+        # Se define la posición inicial de la columna izquierda y derecha para que comiencen juntas
         y_start_columns = pdf.get_y()
 
-        # Columna Izquierda
+        # --- Columna Izquierda ---
         pdf.set_x(10)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
@@ -241,7 +242,8 @@ def main():
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
 
-        # Columna Derecha
+        # --- Columna Derecha ---
+        # Se establece la posición de la columna derecha al mismo nivel de 'y_start_columns'
         pdf.set_y(y_start_columns)
         
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
@@ -302,24 +304,20 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # --- SECCIÓN DE FIRMAS MOVIDA AQUÍ DENTRO DE LA COLUMNA DERECHA ---
-        pdf.ln(5) # Un pequeño espacio después del texto de la empresa
+        # --- SECCIÓN DE FIRMAS (mantiene la misma lógica de alineación que la versión anterior) ---
+        pdf.ln(5) 
         
-        # Definimos las posiciones para las 3 firmas
-        # La posición X se ajusta para que queden centradas en el ancho de la columna derecha (que va de 160 a 277)
-        x_tecnico = 160 + (117 / 3 / 2) - (50 / 2) # Calcula el centro del primer tercio de la columna
-        x_ingenieria = 160 + (117 / 3) + (117 / 3 / 2) - (50 / 2) # Calcula el centro del segundo tercio
-        x_clinico = 160 + (117 / 3 * 2) + (117 / 3 / 2) - (50 / 2) # Calcula el centro del tercer tercio
+        x_tecnico = 160 + (117 / 3 / 2) - (50 / 2)
+        x_ingenieria = 160 + (117 / 3) + (117 / 3 / 2) - (50 / 2)
+        x_clinico = 160 + (117 / 3 * 2) + (117 / 3 / 2) - (50 / 2)
 
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         
-        # Dibujamos las firmas
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_tecnico, y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_ingenieria, y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_clinico, y_firma_image)
 
-        # Añadimos los textos de las firmas
         y_firma_text = y_firma_start + 25
         pdf.set_y(y_firma_text)
         
