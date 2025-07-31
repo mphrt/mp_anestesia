@@ -214,7 +214,8 @@ def main():
         pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
         pdf.ln(3)
 
-        # --- Información general (Corregido) ---
+        # --- Información general (Columna Izquierda) ---
+        y_start_columns = pdf.get_y()
         pdf.set_font("Arial", "", 8)
         pdf.set_x(10)
         pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
@@ -228,30 +229,30 @@ def main():
         pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 1)
         pdf.set_x(10)
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
-        pdf.ln(1)
+        pdf.ln(2)
 
         # --- Checklists en dos columnas ---
-        # Posición y de inicio para las tablas
-        y_start_tables = pdf.get_y()
         
         # Columna Izquierda (Items 1, 2, 3)
-        pdf.set_y(y_start_tables)
+        pdf.set_y(pdf.get_y())
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
+        y_after_col1 = pdf.get_y()
         
-        # Columna Derecha (Items 4, 5, 6 y las nuevas secciones)
-        pdf.set_y(y_start_tables)
+        # Columna Derecha (Items 4, 5, 6, Instrumentos y observaciones)
+        # Sube la columna derecha para que comience a la par con la información de la marca
+        pdf.set_y(y_start_columns)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
         
-        # Ajustamos la posición para las siguientes secciones
-        y_next = pdf.get_y()
-        pdf.set_y(y_next + 2)
-        pdf.set_x(150) # Inicia la nueva sección en la columna derecha
+        # Ajustamos la posición para las siguientes secciones en la columna derecha
+        pdf.set_x(150)
+        pdf.ln(2)
         
         # --- Sección de Instrumentos de análisis (Columna Derecha) ---
+        pdf.set_x(150)
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         pdf.ln(1)
@@ -307,7 +308,7 @@ def main():
 
         pdf.ln(5)
         
-        # Firmas (Se mantiene la posición original, ya que no son parte de las columnas de items)
+        # Firmas (Se mantienen abajo para que no interfieran con las columnas)
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
