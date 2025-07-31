@@ -30,6 +30,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 3.5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
     
+    # Se eliminó el espacio de pdf.ln(2) para pegar los ítems
     # Espacio después de la tabla para separar de la siguiente
     pdf.ln(2)
 
@@ -206,7 +207,7 @@ def main():
         # --- Encabezado y títulos ---
         try:
             # Se aumentó el ancho del logo de 30 a 40 mm
-            pdf.image("logo_hrt_final.jpg", x=10, y=6, w=40)
+            pdf.image("logo_hrt_final.jpg", x=20, y=6, w=40)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
@@ -220,48 +221,51 @@ def main():
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
         
-        pdf.ln(5)
+        # Añadido un salto de línea para bajar la sección de información del equipo
+        pdf.ln(10)
 
         # Secciones principales
         y_start_columns = pdf.get_y()
 
         # Columna Izquierda
-        pdf.set_x(10)
+        # Se ha cambiado el margen de 10 a 20 mm
+        pdf.set_x(20)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(20)
         pdf.cell(0, 3.5, f"Modelo: {modelo}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(20)
         pdf.cell(0, 3.5, f"Número de Serie: {sn}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(20)
         pdf.cell(0, 3.5, f"Número de Inventario: {inventario}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(20)
         pdf.cell(0, 3.5, f"Ubicación: {ubicacion}", 0, 1)
-        pdf.set_x(10)
+        pdf.set_x(20)
         pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=20)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=20)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=20)
         y_after_col1 = pdf.get_y()
 
         # Columna Derecha
+        # Se ha ajustado el margen de 160 a 177 mm para mantener la simetría
         pdf.set_y(y_start_columns)
         
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
-        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=177)
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=177)
+        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=177)
         
         # --- Sección de Instrumentos de análisis (Columna Derecha) ---
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 6)
-            pdf.set_x(150)
+            pdf.set_x(177)
             pdf.cell(30, 3.5, "Equipo", 1, 0, "C", 1)
             pdf.cell(25, 3.5, "Marca", 1, 0, "C", 1)
             pdf.cell(25, 3.5, "Modelo", 1, 0, "C", 1)
@@ -275,7 +279,7 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.set_x(150)
+                    pdf.set_x(177)
                     pdf.cell(30, 3.5, equipo, 1, 0, "L")
                     pdf.cell(25, 3.5, marca_equipo, 1, 0, "L")
                     pdf.cell(25, 3.5, modelo_equipo, 1, 0, "L")
@@ -284,29 +288,29 @@ def main():
         pdf.ln(2)
 
         # --- Observaciones y firmas (Columna Derecha) ---
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 3.5, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.multi_cell(0, 3.5, f"{observaciones}")
         pdf.ln(1)
         
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 3.5, "Observaciones (uso interno):", ln=True)
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.multi_cell(0, 3.5, f"{observaciones_interno}")
         pdf.ln(1)
         
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.cell(0, 3.5, f"Equipo Operativo: {operativo}", ln=True)
         
         # Ahora se coloca "Empresa Responsable" debajo de "Nombre Técnico"
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.cell(0, 3.5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 1)
-        pdf.set_x(150)
+        pdf.set_x(177)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
 
         pdf.ln(5)
