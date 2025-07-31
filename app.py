@@ -7,10 +7,10 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items, x_pos):
+def create_checkbox_table(pdf, section_title, items, x_pos=10):
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 8)
-    pdf.cell(0, 5, section_title, ln=True, border=0)
+    pdf.cell(0, 4, section_title, ln=True, border=0)
     
     # Encabezados de la tabla
     pdf.set_x(x_pos)
@@ -28,9 +28,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 4, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 4, "X" if value == "N/A" else "", 1, 1, "C")
-    
-    # Espacio después de la tabla para separar de la siguiente
-    pdf.ln(2)
+    pdf.ln(1)
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -52,7 +50,7 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
         if cropped_img.mode == 'RGBA':
             cropped_img = cropped_img.convert('RGB')
         
-        img_byte_arr = io.BytesIO()
+        img_byte_arr = io.Bytesio()
         cropped_img.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
         
@@ -197,76 +195,67 @@ def main():
         st.write("Personal Clínico:")
         canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=200, drawing_mode="freedraw", key="canvas_clinico")
 
+
     if st.button("Generar PDF"):
-        pdf = FPDF('L', 'mm', 'A4')
+        pdf = FPDF('L', 'mm', 'A4') # Orientación horizontal 'L'
         pdf.add_page()
         
-        # --- Encabezado y títulos en la columna izquierda ---
+        # Encabezado
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
-        # Títulos (modificado para alinear a la izquierda)
         pdf.set_y(6)
+        pdf.set_x(150)
         pdf.set_font("Arial", "B", 10)
-        pdf.set_x(45) # Movido más a la izquierda
-        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
-        pdf.set_x(45) # Movido más a la izquierda
+        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", ln=True, align="L")
+        pdf.set_x(150)
         pdf.set_font("Arial", "", 8)
-        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
-        pdf.set_x(45) # Movido más a la izquierda
+        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="L")
+        pdf.set_x(150)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
-        
-        pdf.ln(5)
+        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="L")
+        pdf.ln(3)
 
-        # Secciones principales
-        y_start_columns = pdf.get_y()
-
-        # Columna Izquierda
-        pdf.set_x(10)
+        # Información general
         pdf.set_font("Arial", "", 8)
-        pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
-        pdf.set_x(10)
-        pdf.cell(0, 4, f"Modelo: {modelo}", 0, 1)
-        pdf.set_x(10)
-        pdf.cell(0, 4, f"Número de Serie: {sn}", 0, 1)
-        pdf.set_x(10)
-        pdf.cell(0, 4, f"Número de Inventario: {inventario}", 0, 1)
-        pdf.set_x(10)
-        pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 1)
-        pdf.set_x(10)
+        pdf.cell(40, 4, f"Marca: {marca}", 0, 0)
+        pdf.cell(40, 4, f"Modelo: {modelo}", 0, 0)
+        pdf.cell(50, 4, f"Número de Serie: {sn}", 0, 0)
+        pdf.cell(50, 4, f"Número de Inventario: {inventario}", 0, 1)
+        pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 0)
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
-        pdf.ln(2)
+        pdf.ln(1)
 
+        # Checklists en dos columnas
+        y_col1_start = pdf.get_y()
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=10)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
-        y_after_col1 = pdf.get_y()
+        y_col1_end = pdf.get_y()
 
-        # Columna Derecha
-        # Se sube la posición para que coincida con el inicio de la información de la izquierda
-        pdf.set_y(y_start_columns)
-        
-        # El item 4 fue modificado para tener la misma posición 'x' que los títulos de la columna izquierda (10)
+        pdf.set_y(y_col1_start)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
+        y_col2_end = pdf.get_y()
         
-        # --- Sección de Instrumentos de análisis (Columna Derecha) ---
-        pdf.set_x(150)
+        y_next = max(y_col1_end, y_col2_end)
+        pdf.set_y(y_next + 2)
+
+        # Sección de Instrumentos de análisis
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
+        pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
+        pdf.ln(1)
         
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 7)
-            pdf.set_x(150)
-            pdf.cell(30, 4, "Equipo", 1, 0, "C", 1)
-            pdf.cell(25, 4, "Marca", 1, 0, "C", 1)
-            pdf.cell(25, 4, "Modelo", 1, 0, "C", 1)
-            pdf.cell(25, 4, "N° Serie", 1, 1, "C", 1)
+            pdf.cell(60, 4, "Equipo", 1, 0, "C", 1)
+            pdf.cell(40, 4, "Marca", 1, 0, "C", 1)
+            pdf.cell(40, 4, "Modelo", 1, 0, "C", 1)
+            pdf.cell(40, 4, "N° Serie", 1, 1, "C", 1)
             
             pdf.set_font("Arial", "", 7)
             for equipo_data in st.session_state.analisis_equipos:
@@ -276,47 +265,36 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.set_x(150)
-                    pdf.cell(30, 4, equipo, 1, 0, "L")
-                    pdf.cell(25, 4, marca_equipo, 1, 0, "L")
-                    pdf.cell(25, 4, modelo_equipo, 1, 0, "L")
-                    pdf.cell(25, 4, serie_equipo, 1, 1, "L")
+                    pdf.cell(60, 4, equipo, 1, 0, "L")
+                    pdf.cell(40, 4, marca_equipo, 1, 0, "L")
+                    pdf.cell(40, 4, modelo_equipo, 1, 0, "L")
+                    pdf.cell(40, 4, serie_equipo, 1, 1, "L")
         
         pdf.ln(2)
-
-        # --- Observaciones y firmas (Columna Derecha) ---
-        pdf.set_x(150)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 8)
-        pdf.set_x(150)
-        pdf.multi_cell(0, 4, f"{observaciones}")
-        pdf.ln(1)
         
-        pdf.set_x(150)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4, "Observaciones (uso interno):", ln=True)
-        pdf.set_font("Arial", "", 8)
-        pdf.set_x(150)
-        pdf.multi_cell(0, 4, f"{observaciones_interno}")
-        pdf.ln(1)
+        # Información final y firmas
+        # Usamos una posición inicial ajustada para las observaciones
+        y_obs_start = pdf.get_y()
+        pdf.set_y(y_obs_start)
+        pdf.multi_cell(0, 3, f"Observaciones: {observaciones}")
         
-        pdf.set_x(150)
+        y_obs_end = pdf.get_y()
+        pdf.set_y(y_obs_end)
+        pdf.multi_cell(0, 3, f"Observaciones (uso interno): {observaciones_interno}")
+        
+        y_info_end = pdf.get_y()
+        pdf.set_y(y_info_end)
         pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
-        pdf.set_x(150)
-        pdf.cell(100, 4, f"Nombre Técnico: {tecnico}", 0, 0)
-        pdf.set_x(150)
+        pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", 0, 0)
         pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
-
+        
         pdf.ln(5)
         
-        # Firmas (Se mantienen abajo para que no interfieran con las columnas)
-        y_firma_start = max(y_after_col1, pdf.get_y())
-        pdf.set_y(y_firma_start)
-        y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
+        y_firma_start = pdf.get_y()
+        y_firma_image = y_firma_start + 5
         
-        # Dibujar firmas
         add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
         add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
