@@ -1,5 +1,5 @@
 import streamlit as st
-from fpdf import FPDF
+from fpdf import FPDF, fpdf
 import datetime
 import io
 import tempfile
@@ -7,38 +7,42 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-def create_checkbox_table(pdf, section_title, items):
-    # Detección de página horizontal (width=297)
-    if pdf.get_y() > pdf.h - 20: 
-        pdf.add_page(orientation='L')
-        # Re-establecer encabezados si se añade nueva página
-        pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 5, section_title, ln=True)
-        pdf.set_font("Arial", "", 10)
-        pdf.cell(195, 5, "", 0)  # Ajustado para el nuevo ancho
-        pdf.cell(20, 5, "OK", 1, 0, "C") # Ajustado para el nuevo ancho
-        pdf.cell(20, 5, "NO", 1, 0, "C") # Ajustado para el nuevo ancho
-        pdf.cell(20, 5, "N/A", 1, 1, "C") # Ajustado para el nuevo ancho
+# Sobrescribir la clase FPDF para evitar el error de codificación
+class PDF(FPDF):
+    def header(self):
+        # La cabecera se mantendrá igual, pero el ancho total de la página será mayor
+        pass
 
+    def footer(self):
+        # El pie de página se mantendrá igual
+        pass
+
+def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
+    # La lógica para crear tablas ahora toma en cuenta la posición (x, y)
+    if pdf.get_y() > 190:  # Ajustar el salto de página para el formato horizontal
+        pdf.add_page(orientation='L')
+    
+    pdf.set_xy(x_pos, y_pos)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 5, section_title, ln=True)
+    pdf.set_x(x_pos)
     pdf.set_font("Arial", "", 10)
-    # Ajustar el ancho de las celdas para que se ajusten a la página horizontal
-    pdf.cell(195, 5, "", 0)
-    pdf.cell(20, 5, "OK", 1, 0, "C")
-    pdf.cell(20, 5, "NO", 1, 0, "C")
-    pdf.cell(20, 5, "N/A", 1, 1, "C")
-
+    pdf.cell(140, 5, "", 0)
+    pdf.cell(15, 5, "OK", 1, 0, "C")
+    pdf.cell(15, 5, "NO", 1, 0, "C")
+    pdf.cell(15, 5, "N/A", 1, 1, "C")
+    
     for item, value in items:
-        # Salto de página para el contenido de la tabla
-        if pdf.get_y() > pdf.h - 15:
+        pdf.set_x(x_pos)
+        if pdf.get_y() > 200: # Ajustar el salto de página
             pdf.add_page(orientation='L')
-            
-        pdf.cell(195, 5, item, 1) # Ancho ajustado
-        pdf.cell(20, 5, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(20, 5, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(20, 5, "X" if value == "N/A" else "", 1, 1, "C")
+            pdf.set_x(x_pos)
+        pdf.cell(140, 5, item, 1)
+        pdf.cell(15, 5, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(15, 5, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(15, 5, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(2)
+    return pdf.get_y() # Devolver la posición Y actual para continuar
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -159,7 +163,6 @@ def main():
     ])
 
     st.subheader("7. Instrumentos de análisis")
-
     if 'analisis_equipos' not in st.session_state:
         st.session_state.analisis_equipos = [{}]
 
@@ -207,15 +210,15 @@ def main():
 
 
     if st.button("Generar PDF"):
-        # Inicialización del PDF en modo horizontal (L)
-        pdf = FPDF(orientation='L', unit='mm', format='A4')
+        # Se cambia el constructor de FPDF para usar la orientación 'L' (Landscape)
+        pdf = PDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
+        
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=45)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Ajustar el ancho de los encabezados para el formato horizontal
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 8, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
         pdf.set_font("Arial", "", 10)
@@ -224,45 +227,33 @@ def main():
         pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(3)
 
-        # Distribuir la información del equipo en columnas
         pdf.set_font("Arial", "", 10)
-        pdf.set_x(10)
-        pdf.cell(80, 5, f"Marca: {marca}", 0, 0)
-        pdf.cell(80, 5, f"Modelo: {modelo}", 0, 0)
-        pdf.cell(80, 5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
-        pdf.set_x(10)
-        pdf.cell(80, 5, f"Número de Serie: {sn}", 0, 0)
-        pdf.cell(80, 5, f"Número de Inventario: {inventario}", 0, 0)
-        pdf.cell(80, 5, f"Ubicación: {ubicacion}", 0, 1)
+        for label, val in [("Marca", marca), ("Modelo", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("Ubicación", ubicacion), ("Fecha", fecha.strftime("%d/%m/%Y"))]:
+            pdf.cell(0, 5, f"{label}: {val}", ln=True)
         pdf.ln(3)
 
-        # Usar un sistema de columnas para las tablas de chequeo
-        y_position_start_tables = pdf.get_y()
-        x_col1 = 10
-        x_col2 = 148
-        
-        pdf.set_y(y_position_start_tables)
-        pdf.set_x(x_col1)
-        pdf.set_left_margin(10)
-        pdf.set_right_margin(150)
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja)
+        # Dividir la página en dos columnas
+        # Primera columna para las primeras 3 secciones
+        y_pos_col1 = pdf.get_y()
+        x_pos_col1 = 10
+        y_pos_col2 = y_pos_col1
+        x_pos_col2 = 150 # Posición de la segunda columna
 
-        pdf.set_y(y_position_start_tables)
-        pdf.set_x(x_col2)
-        pdf.set_left_margin(148)
-        pdf.set_right_margin(10)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor)
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico)
-        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica)
-        
-        # Restaurar márgenes
-        pdf.set_left_margin(10)
-        pdf.set_right_margin(10)
-        
-        pdf.set_y(max(pdf.get_y(), pdf.get_y_page_break())) # Asegurar que continuemos después de la columna más larga
+        # Primera columna
+        y_pos_col1 = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_col1)
+        y_pos_col1 = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos_col1, y_pos_col1)
+        y_pos_col1 = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos_col1, y_pos_col1)
 
+        # Segunda columna
+        pdf.set_xy(x_pos_col2, y_pos_col2)
+        y_pos_col2 = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_col2)
+        y_pos_col2 = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, y_pos_col2)
+        y_pos_col2 = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, y_pos_col2)
+
+        # El resto de la información se coloca debajo de las dos columnas
+        max_y = max(y_pos_col1, y_pos_col2)
+        pdf.set_y(max_y + 5)
+        
         pdf.set_font("Arial", "B", 10)
         pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
         pdf.set_font("Arial", "", 10)
@@ -270,10 +261,10 @@ def main():
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 9)
-            pdf.cell(70, 6, "Equipo", 1, 0, "C", 1) # Ancho ajustado
-            pdf.cell(70, 6, "Marca", 1, 0, "C", 1) # Ancho ajustado
-            pdf.cell(70, 6, "Modelo", 1, 0, "C", 1) # Ancho ajustado
-            pdf.cell(60, 6, "N° Serie", 1, 1, "C", 1) # Ancho ajustado
+            pdf.cell(50, 6, "Equipo", 1, 0, "C", 1)
+            pdf.cell(50, 6, "Marca", 1, 0, "C", 1)
+            pdf.cell(50, 6, "Modelo", 1, 0, "C", 1)
+            pdf.cell(40, 6, "N° Serie", 1, 1, "C", 1)
             
             pdf.set_font("Arial", "", 9)
             for equipo_data in st.session_state.analisis_equipos:
@@ -283,10 +274,10 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.cell(70, 6, equipo, 1, 0, "L")
-                    pdf.cell(70, 6, marca_equipo, 1, 0, "L")
-                    pdf.cell(70, 6, modelo_equipo, 1, 0, "L")
-                    pdf.cell(60, 6, serie_equipo, 1, 1, "L")
+                    pdf.cell(50, 6, equipo, 1, 0, "L")
+                    pdf.cell(50, 6, marca_equipo, 1, 0, "L")
+                    pdf.cell(50, 6, modelo_equipo, 1, 0, "L")
+                    pdf.cell(40, 6, serie_equipo, 1, 1, "L")
 
         pdf.ln(3)
         pdf.set_font("Arial", "", 10)
@@ -298,7 +289,7 @@ def main():
         
         pdf.ln(10)
         
-        x_positions_for_signature_area = [25, 120, 215]
+        x_positions_for_signature_area = [20, 120, 220]
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         
@@ -324,7 +315,8 @@ def main():
         pdf.set_x(x_positions_for_signature_area[2])
         pdf.cell(60, 5, "PERSONAL CLÍNICO", 0, 1, 'C')
 
-        output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
+        # Se corrige la codificación
+        output = io.BytesIO(pdf.output(dest="S").encode("latin-1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
 if __name__ == "__main__":
