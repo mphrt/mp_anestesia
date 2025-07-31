@@ -240,7 +240,6 @@ def main():
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=10)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=10)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=10)
-        y_after_col1 = pdf.get_y()
 
         # Columna Derecha
         pdf.set_y(y_start_columns)
@@ -303,37 +302,41 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # --- Sección de Firmas ---
-        # Definimos la posición Y actual como el inicio del área de firmas
-        pdf.ln(5) # Espacio después del texto de la empresa responsable
+        # --- SECCIÓN DE FIRMAS MOVIDA AQUÍ DENTRO DE LA COLUMNA DERECHA ---
+        pdf.ln(5) # Un pequeño espacio después del texto de la empresa
+        
+        # Definimos las posiciones para las 3 firmas
+        # La posición X se ajusta para que queden centradas en el ancho de la columna derecha (que va de 160 a 277)
+        x_tecnico = 160 + (117 / 3 / 2) - (50 / 2) # Calcula el centro del primer tercio de la columna
+        x_ingenieria = 160 + (117 / 3) + (117 / 3 / 2) - (50 / 2) # Calcula el centro del segundo tercio
+        x_clinico = 160 + (117 / 3 * 2) + (117 / 3 / 2) - (50 / 2) # Calcula el centro del tercer tercio
+
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         
-        # Estas son las posiciones X para las firmas dentro del ancho de la página
-        x_positions_for_signature_area = [25, 120, 215]
-        
-        # Se añaden las imágenes de las firmas
-        add_signature_to_pdf(pdf, canvas_result_tecnico, x_positions_for_signature_area[0], y_firma_image)
-        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_positions_for_signature_area[1], y_firma_image)
-        add_signature_to_pdf(pdf, canvas_result_clinico, x_positions_for_signature_area[2], y_firma_image)
+        # Dibujamos las firmas
+        add_signature_to_pdf(pdf, canvas_result_tecnico, x_tecnico, y_firma_image)
+        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_ingenieria, y_firma_image)
+        add_signature_to_pdf(pdf, canvas_result_clinico, x_clinico, y_firma_image)
 
-        # Se añaden los textos de las firmas
+        # Añadimos los textos de las firmas
         y_firma_text = y_firma_start + 25
         pdf.set_y(y_firma_text)
-        pdf.set_x(x_positions_for_signature_area[0])
+        
+        pdf.set_x(x_tecnico)
         pdf.cell(50, 4, "_________________________", 0, 0, 'C')
-        pdf.set_x(x_positions_for_signature_area[1])
+        pdf.set_x(x_ingenieria)
         pdf.cell(50, 4, "_________________________", 0, 0, 'C')
-        pdf.set_x(x_positions_for_signature_area[2])
+        pdf.set_x(x_clinico)
         pdf.cell(50, 4, "_________________________", 0, 1, 'C')
         
         pdf.set_y(pdf.get_y() - 1)
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(x_positions_for_signature_area[0])
+        pdf.set_x(x_tecnico)
         pdf.cell(50, 4, "TÉCNICO ENCARGADO", 0, 0, 'C')
-        pdf.set_x(x_positions_for_signature_area[1])
+        pdf.set_x(x_ingenieria)
         pdf.cell(50, 4, "INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_x(x_positions_for_signature_area[2])
+        pdf.set_x(x_clinico)
         pdf.cell(50, 4, "PERSONAL CLÍNICO", 0, 1, 'C')
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
