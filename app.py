@@ -207,17 +207,17 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
-        # Títulos
+        # Títulos (modificado para alinear a la izquierda)
         pdf.set_y(6)
         pdf.set_font("Arial", "B", 10)
-        pdf.set_x(50)
-        pdf.cell(100, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
-        pdf.set_x(50)
+        pdf.set_x(45) # Movido más a la izquierda
+        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "L")
+        pdf.set_x(45) # Movido más a la izquierda
         pdf.set_font("Arial", "", 8)
-        pdf.cell(100, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
-        pdf.set_x(50)
+        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "L")
+        pdf.set_x(45) # Movido más a la izquierda
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(100, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
+        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "L")
         
         pdf.ln(5)
 
@@ -247,8 +247,9 @@ def main():
 
         # Columna Derecha
         # Se sube la posición para que coincida con el inicio de la información de la izquierda
-        pdf.set_y(y_start_columns) 
+        pdf.set_y(y_start_columns)
         
+        # El item 4 fue modificado para tener la misma posición 'x' que los títulos de la columna izquierda (10)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=150)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=150)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=150)
