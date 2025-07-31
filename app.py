@@ -8,28 +8,48 @@ import numpy as np
 from PIL import Image
 
 def create_checkbox_table(pdf, section_title, items, x_pos, y_pos):
-    # La lógica para crear tablas ahora toma en cuenta la posición (x, y)
+    # Definir el ancho de las celdas
+    item_width = 100
+    ok_width = 15
+    no_width = 15
+    na_width = 15
+    
+    # Comprobar si hay que crear una nueva página
+    # Se ajusta la lógica de salto de página para el formato horizontal
+    if y_pos > 180:
+        pdf.add_page(orientation='L')
+        y_pos = 10 # Reiniciar la posición y en la nueva página
+    
+    # Título de la sección
     pdf.set_xy(x_pos, y_pos)
-    
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 5, section_title, ln=True)
-    
-    pdf.set_x(x_pos)
+    pdf.cell(item_width + ok_width + no_width + na_width, 5, section_title, ln=1, align='L')
+    y_pos += 5
+
+    # Encabezado de la tabla
+    pdf.set_xy(x_pos, y_pos)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(100, 5, "", 0)
-    pdf.cell(15, 5, "OK", 1, 0, "C")
-    pdf.cell(15, 5, "NO", 1, 0, "C")
-    pdf.cell(15, 5, "N/A", 1, 1, "C")
+    pdf.cell(item_width, 5, "", 1, 0)
+    pdf.cell(ok_width, 5, "OK", 1, 0, "C")
+    pdf.cell(no_width, 5, "NO", 1, 0, "C")
+    pdf.cell(na_width, 5, "N/A", 1, 1, "C")
+    y_pos += 5
     
+    # Filas de la tabla
     for item, value in items:
-        pdf.set_x(x_pos)
-        # Se ajusta el ancho de la celda para que quepa el texto largo
-        pdf.cell(100, 5, item, 1)
-        pdf.cell(15, 5, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(15, 5, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(15, 5, "X" if value == "N/A" else "", 1, 1, "C")
+        pdf.set_xy(x_pos, y_pos)
+        # Se verifica si el texto del item es muy largo
+        # Para evitar que el texto se salga de la celda, se puede usar multi_cell
+        # o simplemente truncar el texto. Para este ejemplo, lo dejaremos simple.
+        pdf.cell(item_width, 5, item, 1)
+        pdf.cell(ok_width, 5, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(no_width, 5, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(na_width, 5, "X" if value == "N/A" else "", 1, 1, "C")
+        y_pos += 5
+
     pdf.ln(2)
-    return pdf.get_y() # Devolver la posición Y actual para continuar
+    y_pos += 2
+    return y_pos # Devolver la posición Y final para la siguiente tabla
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
     if canvas_result.image_data is not None:
@@ -206,16 +226,16 @@ def main():
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
+        pdf.cell(0, 8, "HOSPITAL REGIONAL DE TALCA", ln=1, align="C")
         pdf.set_font("Arial", "", 10)
-        pdf.cell(0, 6, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="C")
+        pdf.cell(0, 6, "UNIDAD DE INGENIERÍA CLÍNICA", ln=1, align="C")
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
+        pdf.cell(0, 8, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=1, align="C")
         pdf.ln(3)
         
         pdf.set_font("Arial", "", 10)
         for label, val in [("Marca", marca), ("Modelo", modelo), ("Número de Serie", sn), ("Número de Inventario", inventario), ("Ubicación", ubicacion), ("Fecha", fecha.strftime("%d/%m/%Y"))]:
-            pdf.cell(0, 5, f"{label}: {val}", ln=True)
+            pdf.cell(0, 5, f"{label}: {val}", ln=1)
         pdf.ln(3)
 
         # Posiciones de las columnas
@@ -227,18 +247,20 @@ def main():
         y_pos_col1_end = create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos_col1, y_pos_start)
         y_pos_col1_end = create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos_col1, y_pos_col1_end)
         y_pos_col1_end = create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos_col1, y_pos_col1_end)
-
-        # Generar las tablas de la segunda columna
+        
+        # Generar las tablas de la segunda columna de forma independiente
         y_pos_col2_end = create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos_col2, y_pos_start)
-        y_pos_col2_end = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, pdf.get_y())
-        y_pos_col2_end = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, pdf.get_y())
+        y_pos_col2_end = create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos_col2, y_pos_col2_end)
+        y_pos_col2_end = create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos_col2, y_pos_col2_end)
         
         # El resto de la información se coloca debajo de las dos columnas
         max_y = max(y_pos_col1_end, y_pos_col2_end)
-        pdf.set_y(max_y + 5)
+        pdf.set_y(max_y)
         
+        pdf.set_x(x_pos_col1)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=True)
+        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=1)
+        pdf.set_x(x_pos_col1)
         pdf.set_font("Arial", "", 10)
 
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
@@ -263,12 +285,17 @@ def main():
                     pdf.cell(40, 6, serie_equipo, 1, 1, "L")
 
         pdf.ln(3)
+        pdf.set_x(x_pos_col1)
         pdf.set_font("Arial", "", 10)
         pdf.multi_cell(0, 4, f"Observaciones: {observaciones}")
+        pdf.set_x(x_pos_col1)
         pdf.multi_cell(0, 4, f"Observaciones (uso interno): {observaciones_interno}")
-        pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=True)
-        pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", ln=True)
-        pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=True)
+        pdf.set_x(x_pos_col1)
+        pdf.cell(0, 4, f"Equipo Operativo: {operativo}", ln=1)
+        pdf.set_x(x_pos_col1)
+        pdf.cell(0, 4, f"Nombre Técnico: {tecnico}", ln=1)
+        pdf.set_x(x_pos_col1)
+        pdf.cell(0, 4, f"Empresa Responsable: {empresa}", ln=1)
         
         pdf.ln(10)
         
@@ -298,7 +325,6 @@ def main():
         pdf.set_x(x_positions_for_signature_area[2])
         pdf.cell(60, 5, "PERSONAL CLÍNICO", 0, 1, 'C')
 
-        # Se corrige la codificación
         output = io.BytesIO(pdf.output(dest="S").encode("latin-1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
 
