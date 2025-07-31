@@ -10,8 +10,8 @@ import os
 
 # Coordenadas y anchos para el diseño de dos columnas
 COL1_START = 10
-COL2_START = 110
-COLUMN_WIDTH = 95
+COL2_START = 150
+COLUMN_WIDTH = 130 # Aumento del ancho de la columna para mejor ajuste en página horizontal
 
 def create_checkbox_table(pdf, section_title, items, column_start_x):
     """Crea una tabla con checkboxes en la columna especificada."""
@@ -21,9 +21,8 @@ def create_checkbox_table(pdf, section_title, items, column_start_x):
 
     pdf.set_x(column_start_x)
     pdf.set_font("Arial", "", 7)
-    table_width = COLUMN_WIDTH
-    item_cell_width = 65
-    option_cell_width = (table_width - item_cell_width) / 3
+    item_cell_width = 80 # Ancho ajustado para descripciones más largas
+    option_cell_width = (COLUMN_WIDTH - item_cell_width) / 3
 
     pdf.cell(item_cell_width, 4, "", 0)
     pdf.cell(option_cell_width, 4, "OK", 1, 0, "C")
@@ -68,7 +67,7 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
         desired_img_width_mm = 50
         img_height_mm = (cropped_img.height / cropped_img.width) * desired_img_width_mm
         
-        max_height = 20  # Reducir la altura máxima para que la firma quepa mejor
+        max_height = 20
         if img_height_mm > max_height:
             img_height_mm = max_height
             desired_img_width_mm = (cropped_img.width / cropped_img.height) * img_height_mm
@@ -87,7 +86,6 @@ def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
     st.write("---")
     
-    # Columnas para la entrada de datos del equipo
     col_marca, col_modelo = st.columns(2)
     with col_marca:
         marca = st.text_input("Marca")
@@ -234,12 +232,12 @@ def main():
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
         pdf.set_font("Arial", "B", 10)
-        pdf.set_xy(80, 8)
+        pdf.set_xy(100, 8)
         pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", ln=True, align="C")
-        pdf.set_x(80)
+        pdf.set_x(100)
         pdf.set_font("Arial", "", 8)
         pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", ln=True, align="C")
-        pdf.set_x(80)
+        pdf.set_x(100)
         pdf.set_font("Arial", "B", 9)
         pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", ln=True, align="C")
         pdf.ln(1)
@@ -249,54 +247,54 @@ def main():
         
         # Información del equipo en dos columnas
         pdf.set_x(10)
-        pdf.cell(45, 4, f"Marca: {marca}")
-        pdf.set_x(100)
-        pdf.cell(45, 4, f"Número de Serie: {sn}", ln=True)
+        pdf.cell(80, 4, f"Marca: {marca}")
+        pdf.set_x(COL2_START)
+        pdf.cell(80, 4, f"Número de Serie: {sn}", ln=True)
 
         pdf.set_x(10)
-        pdf.cell(45, 4, f"Modelo: {modelo}")
-        pdf.set_x(100)
-        pdf.cell(45, 4, f"Número de Inventario: {inventario}", ln=True)
+        pdf.cell(80, 4, f"Modelo: {modelo}")
+        pdf.set_x(COL2_START)
+        pdf.cell(80, 4, f"Número de Inventario: {inventario}", ln=True)
         
         pdf.set_x(10)
-        pdf.cell(45, 4, f"Ubicación: {ubicacion}")
-        pdf.set_x(100)
-        pdf.cell(45, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", ln=True)
+        pdf.cell(80, 4, f"Ubicación: {ubicacion}")
+        pdf.set_x(COL2_START)
+        pdf.cell(80, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", ln=True)
         
         pdf.ln(2)
         
-        # Posición inicial para las tablas de la primera columna
-        pdf.set_y(40)
-        
-        # Tablas de la primera columna
-        y_pos_col1 = pdf.get_y()
-        pdf.set_y(y_pos_col1)
+        # Posición inicial para las tablas
+        y_initial_tables = 40
+        pdf.set_y(y_initial_tables)
+
+        # Generar tablas en la primera columna
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, COL1_START)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, COL1_START)
+        y_pos_col1_after_tables = pdf.get_y()
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, COL1_START)
-
-        # Tablas de la segunda columna
-        pdf.set_y(y_pos_col1)
+        
+        # Generar tablas en la segunda columna, a la misma altura
+        pdf.set_y(y_initial_tables)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, COL2_START)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, COL2_START)
+        y_pos_col2_after_tables = pdf.get_y()
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, COL2_START)
         
-        # Posicionar el resto de la información debajo de las columnas
-        y_after_tables = max(pdf.get_y(), y_pos_col1 + 100) # Asegurar que esté debajo de ambas columnas
-        pdf.set_y(y_after_tables)
-        pdf.set_x(10)
+        # Posicionar el resto de la información debajo de la columna más larga
+        y_after_all_tables = max(y_pos_col1_after_tables, y_pos_col2_after_tables)
+        pdf.set_y(y_after_all_tables)
+        pdf.set_x(COL1_START)
         
         # 7. Instrumentos de análisis
         pdf.set_font("Arial", "B", 8)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
-        pdf.set_x(10)
+        pdf.set_x(COL1_START)
         pdf.set_font("Arial", "", 7)
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             # Encabezados de la tabla
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 7)
-            pdf.set_x(10)
-            # Ajuste de anchos para que quepan
+            pdf.set_x(COL1_START)
             cell_width = 45
             pdf.cell(cell_width, 4, "Equipo", 1, 0, "C", 1)
             pdf.cell(cell_width, 4, "Marca", 1, 0, "C", 1)
@@ -311,23 +309,23 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.set_x(10)
+                    pdf.set_x(COL1_START)
                     pdf.cell(cell_width, 4, equipo, 1, 0, "L")
                     pdf.cell(cell_width, 4, marca_equipo, 1, 0, "L")
                     pdf.cell(cell_width, 4, modelo_equipo, 1, 0, "L")
                     pdf.cell(cell_width, 4, serie_equipo, 1, 1, "L")
 
-        pdf.ln(1)
+        pdf.ln(2)
+        pdf.set_x(COL1_START)
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(10)
         pdf.multi_cell(0, 3, f"Observaciones: {observaciones}")
-        pdf.set_x(10)
+        pdf.set_x(COL1_START)
         pdf.multi_cell(0, 3, f"Observaciones (uso interno): {observaciones_interno}")
-        pdf.set_x(10)
+        pdf.set_x(COL1_START)
         pdf.cell(0, 3, f"Equipo Operativo: {operativo}", ln=True)
-        pdf.set_x(10)
+        pdf.set_x(COL1_START)
         pdf.cell(0, 3, f"Nombre Técnico: {tecnico}", ln=True)
-        pdf.set_x(10)
+        pdf.set_x(COL1_START)
         pdf.cell(0, 3, f"Empresa Responsable: {empresa}", ln=True)
         
         pdf.ln(5)
