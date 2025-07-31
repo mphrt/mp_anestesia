@@ -199,7 +199,7 @@ def main():
         pdf = FPDF('L', 'mm', 'A4') # Orientación horizontal 'L'
         pdf.add_page()
         
-        # --- Encabezado (Corregido) ---
+        # --- Encabezado ---
         try:
             pdf.image("logo_hrt_final.jpg", x=10, y=6, w=30)
         except Exception as e:
@@ -207,32 +207,31 @@ def main():
         
         pdf.set_y(6)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C") # Centrado
+        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", 0, 1, "C")
         pdf.set_font("Arial", "", 8)
-        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C") # Centrado
+        pdf.cell(0, 4, "UNIDAD DE INGENIERÍA CLÍNICA", 0, 1, "C")
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C") # Centrado
+        pdf.cell(0, 5, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA", 0, 1, "C")
         pdf.ln(3)
 
-        # --- Información general (Corregida) ---
+        # --- Información general (Corregido) ---
         pdf.set_font("Arial", "", 8)
-        y_info = pdf.get_y()
-        pdf.set_y(y_info)
         pdf.set_x(10)
-        pdf.cell(40, 4, f"Marca: {marca}", 0, 0)
-        pdf.set_x(70)
-        pdf.cell(40, 4, f"Modelo: {modelo}", 0, 0)
-        pdf.set_x(130)
-        pdf.cell(50, 4, f"Número de Serie: {sn}", 0, 0)
-        pdf.set_x(190)
-        pdf.cell(50, 4, f"Número de Inventario: {inventario}", 0, 1)
+        pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
         pdf.set_x(10)
-        pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 0)
-        pdf.set_x(190)
+        pdf.cell(0, 4, f"Modelo: {modelo}", 0, 1)
+        pdf.set_x(10)
+        pdf.cell(0, 4, f"Número de Serie: {sn}", 0, 1)
+        pdf.set_x(10)
+        pdf.cell(0, 4, f"Número de Inventario: {inventario}", 0, 1)
+        pdf.set_x(10)
+        pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 1)
+        pdf.set_x(10)
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(1)
 
         # --- Checklists en dos columnas ---
+        # Posición y de inicio para las tablas
         y_start_tables = pdf.get_y()
         
         # Columna 1
@@ -254,12 +253,14 @@ def main():
 
         # --- Sección de Instrumentos de análisis ---
         pdf.set_font("Arial", "B", 8)
+        pdf.set_x(10)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
         pdf.ln(1)
         
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 7)
+            pdf.set_x(10)
             pdf.cell(60, 4, "Equipo", 1, 0, "C", 1)
             pdf.cell(40, 4, "Marca", 1, 0, "C", 1)
             pdf.cell(40, 4, "Modelo", 1, 0, "C", 1)
@@ -273,6 +274,7 @@ def main():
                 serie_equipo = equipo_data.get('serie', '')
                 
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
+                    pdf.set_x(10)
                     pdf.cell(60, 4, equipo, 1, 0, "L")
                     pdf.cell(40, 4, marca_equipo, 1, 0, "L")
                     pdf.cell(40, 4, modelo_equipo, 1, 0, "L")
@@ -280,7 +282,7 @@ def main():
         
         pdf.ln(2)
         
-        # --- Observaciones y firmas (Corregido) ---
+        # --- Observaciones y firmas ---
         
         # Colocamos las observaciones primero para que ajusten su altura
         y_obs = pdf.get_y()
@@ -309,7 +311,7 @@ def main():
 
         pdf.ln(5)
         
-        # Posición para las firmas
+        # Firmas
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         x_positions_for_signature_area = [25, 120, 215]
