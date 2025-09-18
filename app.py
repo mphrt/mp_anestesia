@@ -286,36 +286,52 @@ def main():
         pdf.set_y(content_y_base)
 
         # ======= COLUMNA IZQUIERDA =======
-        pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # FECHA (3 celdas) alineada con "Marca"
+        # FECHA (3 celdas) – alineada con "Marca", y TODO con la misma columna de etiquetas
         y_marca = pdf.get_y()
         date_col_w   = 11.0
         date_table_w = date_col_w * 3
         x_date_right = FIRST_TAB_RIGHT
         x_date       = x_date_right - date_table_w
-        label_w      = 13.0
+        fecha_label_w = 13.0
         gap_lab_box  = 1.8
-        x_label      = x_date - label_w - gap_lab_box
-        marca_text_w = max(22, x_label - FIRST_COL_LEFT - 2)
+        x_label_fecha = x_date - fecha_label_w - gap_lab_box
 
-        dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
+        # Columna fija para etiquetas de datos (misma X que en punto 7)
+        label_w_common = 17.0  # MISMO ancho de etiqueta que en el punto 7
+        gap_after_label = 2.0
 
-        pdf.set_xy(FIRST_COL_LEFT, y_marca); pdf.cell(marca_text_w, line_h, f"Marca: {marca}", 0, 0, "L")
-        pdf.set_xy(x_label, y_marca); pdf.set_font("Arial", "B", 7.5); pdf.cell(label_w, line_h, "FECHA:", 0, 0, "R")
+        # Línea "Marca:" con fecha a la derecha
+        pdf.set_xy(FIRST_COL_LEFT, y_marca)
+        pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
+        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + gap_after_label)
+        value_w_line1 = max(10, value_w_line1)
+        pdf.cell(value_w_line1, line_h, f"{marca}", 0, 0, "L")
+
+        # FECHA:
+        pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
+        dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
         pdf.set_xy(x_date, y_marca)
         pdf.cell(date_col_w, line_h, dd,   1, 0, "C")
         pdf.cell(date_col_w, line_h, mm,   1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
 
-        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Modelo: {modelo}", 0, 1)
-        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Número de Serie: {sn}", 0, 1)
-        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Número de Inventario: {inventario}", 0, 1)
-        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Ubicación: {ubicacion}", 0, 1)
+        # Función para las siguientes líneas (misma columna de “:”)
+        def left_field(lbl, val):
+            pdf.set_x(FIRST_COL_LEFT)
+            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
+            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
+            pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
+
+        left_field("Modelo", modelo)
+        left_field("Número de Serie", sn)
+        left_field("Número de Inventario", inventario)
+        left_field("Ubicación", ubicacion)
 
         pdf.ln(2.6)
 
@@ -338,26 +354,26 @@ def main():
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
 
-        # Dibujar encabezado exactamente como create_checkbox_table
+        # Cabecera igual que otras secciones
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.2)
-        title_prefix = " " * (2 * 2)  # misma tabulación que el resto
+        title_prefix = " " * (2 * 2)
         pdf.cell(ITEM_W, LEFT_ROW_H, f"{title_prefix}5. Ventilador mecánico", border=1, ln=0, align="L", fill=True)
         pdf.set_font("Arial", "B", 6.2)
         pdf.cell(COL_W, LEFT_ROW_H, "OK",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "NO",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "N/A", border=1, ln=1, align="C", fill=True)
 
-        # >>> Leyenda solicitada justo DEBAJO del título <<<
+        # Leyenda  (misma fuente que 5.1–5.6 -> 6.2 pt)
         pdf.set_font("Arial", "", 6.2)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)  # indent visual
+        pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)
         pdf.cell(max(1, ITEM_W - 5.0), LEFT_ROW_H,
                  "Verifique que el equipo muestra en pantalla los siguientes parámetros:",
                  border=0, ln=1, align="L")
 
-        # Ahora las filas 5.1 a 5.6 con casillas
+        # Filas 5.1 a 5.6
         create_rows_only(pdf, vm_izq, x_pos=FIRST_COL_LEFT,
                          item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, cell_fs=6.2, indent_w=5.0)
 
@@ -366,9 +382,11 @@ def main():
         # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
         pdf.set_x(SECOND_COL_LEFT)
-        pdf.set_font("Arial", "", 7.5)
+
+        # Leyenda 5.7/5.8 MISMO TAMAÑO (6.2 pt)
+        pdf.set_font("Arial", "", 6.2)
         pdf.multi_cell(col_total_w, 3.4, "Verifique que el equipo realiza las siguientes acciones:", border=0)
-        pdf.ln(0.4)
+        pdf.ln(0.2)
 
         vm_der = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.7.") or it.startswith("5.8.")]
@@ -391,15 +409,17 @@ def main():
         col_w = (col_total_w - gap_cols) / 2.0
         left_x = SECOND_COL_LEFT
         right_x = SECOND_COL_LEFT + col_w + gap_cols
+
+        # MISMO ancho de etiqueta que en la izquierda:
         label_w = 17.0
         text_w = col_w - label_w - 3.0
-        row_h_field = 3.4  # interlineado EXACTO 3.4 mm
+        row_h_field = 3.4  # interlineado 3.4 mm
+        pdf.set_font("Arial", "", 6.2)  # mismo tamaño que subtítulos
 
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
         def draw_column_no_lines(x, y, data):
-            pdf.set_font("Arial", "", 6.2)   # igual a subtítulos
             yy = y
             def field(lbl, val=""):
                 nonlocal yy
