@@ -26,7 +26,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
         pdf.cell(10, 3.5, "X" if value == "OK" else "", 1, 0, "C")
         pdf.cell(10, 3.5, "X" if value == "NO" else "", 1, 0, "C")
         pdf.cell(10, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
-    
     pdf.ln(2)
 
 def _crop_signature(canvas_result):
@@ -222,33 +221,34 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
 
-        # === NUEVO ENCABEZADO: logo + fila gris con título ===
-        logo_x, logo_y, logo_w = 22, 6, 58   # logo MÁS grande
+        # === ENCABEZADO nuevo ===
+        # Logo más grande
+        logo_x, logo_y, logo_w = 22, 6, 70   # <- AGRANDADO
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=logo_w)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Fila gris (tipo "tabla") a la derecha del logo
-        title_x = logo_x + logo_w + 8
-        title_y = logo_y + 4
-        title_h = 12
-        right_margin = 22
-        title_w = pdf.w - title_x - right_margin
+        # Fila gris a la derecha del logo, hasta la MITAD de la hoja
+        mid_x = pdf.w / 2.0
+        title_x = logo_x + logo_w + 6
+        right_limit = mid_x
+        title_w = max(20, right_limit - title_x)  # asegura ancho mínimo
+        title_y = logo_y + 3
+        title_h = 14
 
-        pdf.set_fill_color(230, 230, 230)  # gris claro
+        pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(title_w, title_h, "PAUTA MANTENCIÓN MAQUINA DE ANESTESIA", border=1, ln=1, align="C", fill=True)
+        pdf.cell(title_w, title_h, "PAUTA MANTENCION MAQUINA DE ANESTESIA", border=1, ln=1, align="C", fill=True)
 
-        # Posicionamiento de comienzo de contenido (debajo del encabezado nuevo)
-        pdf.set_y(title_y + title_h + 10)
+        # Punto de arranque del contenido
+        content_y_base = title_y + title_h + 10
+        pdf.set_y(content_y_base)
 
+        # --- COLUMNA IZQUIERDA (igual que antes) ---
         y_column_start_left = pdf.get_y()
-        y_column_start_right = pdf.get_y()
-
-        # --- COLUMNA IZQUIERDA ---
         pdf.set_y(y_column_start_left)
         pdf.set_x(22)
         pdf.set_font("Arial", "", 7)
@@ -269,17 +269,20 @@ def main():
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=22)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=22)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=22)
-        
+
         # --- COLUMNA DERECHA ---
-        pdf.set_y(y_column_start_right) 
+        # Subimos el punto 5 (Ventilador mecánico) ~12 mm respecto al arranque base
+        y_column_start_right = max(title_y + title_h + 2, content_y_base - 12)
+        pdf.set_y(y_column_start_right)
+
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
-        
+
         # Sección de Instrumentos de análisis (Columna Derecha)
         pdf.set_x(160)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
-        
+
         if st.session_state.analisis_equipos and any(equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie') for equipo in st.session_state.analisis_equipos):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 6)
@@ -340,7 +343,7 @@ def main():
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # FIRMAS FINALES (solo 2 con rótulos requeridos)
+        # FIRMAS finales (2)
         pdf.ln(5) 
         ancho_area = 117
         ancho_caja = 50
