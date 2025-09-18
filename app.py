@@ -239,7 +239,6 @@ def main():
         # ======= ENCABEZADO =======
         logo_x, logo_y = 2, 2
         LOGO_W_MM = 60
-        TITLE_UP_MM = 8
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
@@ -255,10 +254,11 @@ def main():
         except Exception:
             st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
+        # Franja gris: más delgada y alineada con el borde inferior del logo
         pdf.set_font("Arial", "B", 7)
-        title_h = 6
+        title_h = 5.0  # apenas más alta que la letra
         title_x = logo_x + LOGO_W_MM + sep
-        title_y = max(logo_y, (logo_y + logo_h) - TITLE_UP_MM)
+        title_y = (logo_y + logo_h) - title_h  # su borde inferior coincide con el del logo
         cell_w  = max(10, FIRST_TAB_RIGHT - title_x)
 
         pdf.set_fill_color(230, 230, 230)
@@ -277,26 +277,38 @@ def main():
 
         # --- FECHA (3 celdas) alineada con "Marca" y pegada al borde de OK/NO/N/A ---
         y_marca = pdf.get_y()
-        # Ancho de cada columna de fecha (mismo ancho)
-        date_col_w = 11.0
+        date_col_w   = 11.0
         date_table_w = date_col_w * 3
-        x_date = FIRST_TAB_RIGHT - date_table_w  # pegado al borde derecho de la 1ª tabla
+        x_date_right = FIRST_TAB_RIGHT                        # borde derecho de la 1ª tabla
+        x_date       = x_date_right - date_table_w            # inicio de las 3 celdas
+        label_w      = 12.0
+        gap_lab_box  = 1.5
+        x_label      = x_date - label_w - gap_lab_box         # "FECHA:" a la izquierda de las celdas
+
+        # Texto "Marca" acotado para no invadir el bloque de fecha+etiqueta
+        marca_text_w = max(20, x_label - FIRST_COL_LEFT - 2)
+
         # Contenido fecha
         dd = f"{fecha.day:02d}"
         mm = f"{fecha.month:02d}"
         yyyy = f"{fecha.year:04d}"
-        # Reservar ancho para "Marca" sin invadir la fecha
-        marca_text_w = max(20, x_date - FIRST_COL_LEFT - 2)
 
-        # Línea "Marca"
+        # Línea "Marca" (en la misma fila)
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
-        pdf.cell(marca_text_w, line_h, f"Marca: {marca}", 0, 1)
+        pdf.cell(marca_text_w, line_h, f"Marca: {marca}", 0, 0, "L")
 
-        # Dibujar tabla de fecha (tres columnas) a la MISMA altura
+        # Etiqueta FECHA:
+        pdf.set_xy(x_label, y_marca)
+        pdf.set_font("Arial", "B", 7)
+        pdf.cell(label_w, line_h, "FECHA:", 0, 0, "R")
+        pdf.set_font("Arial", "", 7)
+
+        # Tabla de fecha (D, M, AÑO)
         pdf.set_xy(x_date, y_marca)
-        pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
-        pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
-        pdf.cell(date_col_w, line_h, yyyy, 1, 1, "C")
+        pdf.cell(date_col_w, line_h, dd,   1, 0, "C")
+        pdf.cell(date_col_w, line_h, mm,   1, 0, "C")
+        pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
+        pdf.ln(line_h)
 
         # Resto de líneas informativas
         pdf.set_x(FIRST_COL_LEFT)
@@ -415,31 +427,41 @@ def main():
         pdf.cell(name_box_w, 5, name_text, 0, 0, "L")
         firma_label_w = 12
         pdf.cell(firma_label_w, 5, "Firma:", 0, 0, "L")
-        x_sig = pdf.get_x()
+        x_sig_tecnico = pdf.get_x()
         sig_w, sig_h = min(50, col_total_w * 0.35), 12
-        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig, y=y_nombre, w_mm=sig_w, h_mm=sig_h)
+        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=sig_w, h_mm=sig_h)
         pdf.set_y(y_nombre + sig_h + 2)
 
         # Empresa
         pdf.set_x(SECOND_COL_LEFT)
         pdf.cell(0, 4, f"Empresa Responsable: {empresa}", 0, 1)
 
-        # ---------- Firmas de recepción ----------
+        # ---------- Firmas de recepción (centradas sobre la línea y en negrita los textos) ----------
         pdf.ln(5) 
         ancho_area = col_total_w
         ancho_caja = min(60, ancho_area * 0.42)
         x_izq = SECOND_COL_LEFT + (ancho_area/4) - (ancho_caja/2)
         x_der = SECOND_COL_LEFT + (3*ancho_area/4) - (ancho_caja/2)
+
+        # Firmas centradas horizontalmente sobre la línea:
         y_firma_start = pdf.get_y()
-        y_firma_image = y_firma_start + 5
-        add_signature_inline(pdf, canvas_result_ingenieria, x=x_izq, y=y_firma_image, w_mm=45, h_mm=12)
-        add_signature_inline(pdf, canvas_result_clinico,     x=x_der, y=y_firma_image, w_mm=45, h_mm=12)
-        y_lineas = y_firma_start + 25
+        y_firma_image = y_firma_start + 4
+        sig_recep_w = 45
+        sig_recep_h = 12
+        x_sig_izq = x_izq + (ancho_caja - sig_recep_w) / 2.0
+        x_sig_der = x_der + (ancho_caja - sig_recep_w) / 2.0
+        add_signature_inline(pdf, canvas_result_ingenieria, x=x_sig_izq, y=y_firma_image, w_mm=sig_recep_w, h_mm=sig_recep_h)
+        add_signature_inline(pdf, canvas_result_clinico,     x=x_sig_der, y=y_firma_image, w_mm=sig_recep_w, h_mm=sig_recep_h)
+
+        # Líneas de firma
+        y_lineas = y_firma_start + 23
         pdf.set_y(y_lineas)
         pdf.set_x(x_izq); pdf.cell(ancho_caja, 4, "_________________________", 0, 0, 'C')
         pdf.set_x(x_der);  pdf.cell(ancho_caja, 4, "_________________________", 0, 1, 'C')
+
+        # Textos en NEGRITA
         label_y = pdf.get_y() - 1
-        pdf.set_font("Arial", "", 7)
+        pdf.set_font("Arial", "B", 7)
         pdf.set_xy(x_izq, label_y);     pdf.cell(ancho_caja, 4, "RECEPCIÓN CONFORME", 0, 0, 'C')
         pdf.set_xy(x_izq, label_y + 4); pdf.cell(ancho_caja, 4, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
         pdf.set_xy(x_der, label_y);     pdf.cell(ancho_caja, 4, "RECEPCIÓN CONFORME", 0, 0, 'C')
