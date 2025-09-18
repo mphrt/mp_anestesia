@@ -111,12 +111,11 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     w_text = max(1, w - 2*padding)
     pdf.set_xy(x_text, y_body + padding)
     pdf.set_font("Arial", "", fs_body)
-    start_y = pdf.get_y()
     if text:
         pdf.multi_cell(w_text, body_line_h, text, border=0, align="L")
-    end_y = pdf.get_y()
 
     # Altura final
+    end_y = pdf.get_y()
     content_h = max(min_h, (end_y - (y_body + padding)) + padding)
     pdf.rect(x, y_body, w, content_h)
     pdf.set_y(y_body + content_h)
@@ -334,12 +333,34 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
+        # --- 5. Ventilador mecánico (con leyenda debajo del título) ---
         vm_izq = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
-        create_checkbox_table(pdf, "5. Ventilador mecánico", vm_izq, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
-                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
+
+        # Dibujar encabezado exactamente como create_checkbox_table
+        pdf.set_x(FIRST_COL_LEFT)
+        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "B", 7.2)
+        title_prefix = " " * (2 * 2)  # misma tabulación que el resto
+        pdf.cell(ITEM_W, LEFT_ROW_H, f"{title_prefix}5. Ventilador mecánico", border=1, ln=0, align="L", fill=True)
+        pdf.set_font("Arial", "B", 6.2)
+        pdf.cell(COL_W, LEFT_ROW_H, "OK",  border=1, ln=0, align="C", fill=True)
+        pdf.cell(COL_W, LEFT_ROW_H, "NO",  border=1, ln=0, align="C", fill=True)
+        pdf.cell(COL_W, LEFT_ROW_H, "N/A", border=1, ln=1, align="C", fill=True)
+
+        # >>> Leyenda solicitada justo DEBAJO del título <<<
+        pdf.set_font("Arial", "", 6.2)
+        pdf.set_x(FIRST_COL_LEFT)
+        pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)  # indent visual
+        pdf.cell(max(1, ITEM_W - 5.0), LEFT_ROW_H,
+                 "Verifique que el equipo muestra en pantalla los siguientes parámetros:",
+                 border=0, ln=1, align="L")
+
+        # Ahora las filas 5.1 a 5.6 con casillas
+        create_rows_only(pdf, vm_izq, x_pos=FIRST_COL_LEFT,
+                         item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, cell_fs=6.2, indent_w=5.0)
+
         pdf.ln(1.6)
 
         # ======= COLUMNA DERECHA =======
@@ -377,15 +398,14 @@ def main():
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
-        # Columnas SIN líneas (ni bordes inferiores) y con fuente igual a subtítulos (6.2)
         def draw_column_no_lines(x, y, data):
-            pdf.set_font("Arial", "", 6.2)   # ← mismo tamaño que subtítulos
+            pdf.set_font("Arial", "", 6.2)   # igual a subtítulos
             yy = y
             def field(lbl, val=""):
                 nonlocal yy
                 pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
                 pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
-                yy += row_h_field  # interlineado fijo de 3.4 mm
+                yy += row_h_field
             field("EQUIPO",  data.get('equipo', ''))
             field("MARCA",   data.get('marca', ''))
             field("MODELO",  data.get('modelo', ''))
@@ -397,7 +417,6 @@ def main():
         pdf.set_y(max(end_left, end_right) + 2)
 
         # ---------- Observaciones (general) ----------
-        # Caja MÁS PEQUEÑA, pero crece si el texto es largo
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=10,
                              title="Observaciones", text=observaciones,
@@ -426,7 +445,6 @@ def main():
         pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
-        # Caja MÁS PEQUEÑA, con auto-ajuste
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=10,
                              title="Observaciones (uso interno)", text=observaciones_interno,
