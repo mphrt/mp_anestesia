@@ -56,7 +56,7 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
-    """(Se mantiene para las firmas de la sección inferior)"""
+    """Inserta firma centrada en un área de 50 mm de ancho (para el pie)."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -65,7 +65,6 @@ def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
         tmp_file.write(img_byte_arr.read())
         tmp_path = tmp_file.name
     
-    # Dimensiones objetivo (mm)
     desired_img_width_mm = 40
     img = Image.open(tmp_path)
     img_height_mm = (img.height / img.width) * desired_img_width_mm
@@ -100,14 +99,12 @@ def add_signature_in_box(pdf_obj, canvas_result, x, y, w_mm=40, h_mm=12, draw_bo
 
     try:
         img = Image.open(tmp_path)
-        # Escalado para que quepa respetando aspecto
         img_w_mm = w_mm
         img_h_mm = (img.height / img.width) * img_w_mm
         if img_h_mm > h_mm:
             img_h_mm = h_mm
             img_w_mm = (img.width / img.height) * img_h_mm
 
-        # Centrado dentro de la caja
         draw_x = x + (w_mm - img_w_mm) / 2.0
         draw_y = y + (h_mm - img_h_mm) / 2.0
         pdf_obj.image(tmp_path, x=draw_x, y=draw_y, w=img_w_mm, h=img_h_mm)
@@ -122,7 +119,6 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5):
     """
     pdf.set_font("Arial", "", 7)
     label_w = 32  # ancho del texto 'Equipo Operativo:'
-    # rótulo
     pdf.set_xy(x, y)
     pdf.cell(label_w, size, "Equipo Operativo:", 0, 0)
 
@@ -140,7 +136,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5):
     pdf.set_xy(x_box_no, y)
     pdf.cell(size, size, "X" if selected == "NO" else "", 0, 0, "C")
     pdf.set_xy(x_box_no + size + text_gap, y)
-    pdf.cell(6, size, "NO", 0, 1)  # ln=1 para salto de línea
+    pdf.cell(6, size, "NO", 0, 1)
 
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -269,7 +265,8 @@ def main():
         
         # --- ENCABEZADO Y TÍTULOS CENTRADOS ---
         try:
-            pdf.image("logo_hrt_final.jpg", x=22, y=6, w=40)
+            # LOGO +2mm (de 40 -> 42)
+            pdf.image("logo_hrt_final.jpg", x=22, y=6, w=42)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
         
@@ -366,60 +363,68 @@ def main():
         # === Equipo Operativo con casillas SI/NO ===
         y_equipo_op = pdf.get_y()
         draw_si_no_boxes(pdf, x=160, y=y_equipo_op, selected=operativo, size=4)
-        pdf.ln(2)  # pequeño espacio tras la línea
+        pdf.ln(2)
 
-        # === Nombre Técnico/Ingeniero con firma a la derecha ===
+        # === Nombre Técnico/Ingeniero con firma a la derecha (se mantiene) ===
         pdf.set_x(160)
         pdf.set_font("Arial", "", 7)
         y_nombre = pdf.get_y()
-        # Ancho reservado para texto del nombre
         name_box_w = 70
         pdf.cell(name_box_w, 5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 0, "L")
 
-        # Caja de firma a la derecha del nombre (40x12 mm aprox)
         sig_w, sig_h = 40, 12
         x_sig = 160 + name_box_w + 5
         y_sig = y_nombre
         add_signature_in_box(pdf, canvas_result_tecnico, x=x_sig, y=y_sig, w_mm=sig_w, h_mm=sig_h, draw_border=True)
-        # Forzar salto a la altura de la firma para no solapar la siguiente línea
         pdf.set_y(y_sig + sig_h + 2)
 
         # Empresa
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # --- SECCIÓN DE FIRMAS (se mantiene) ---
+        # --- SECCIÓN DE FIRMAS (solo 2: Ing. Clínica y Personal Clínico) ---
         pdf.ln(5) 
         
-        x_tecnico = 160 + (117 / 3 / 2) - (50 / 2)
-        x_ingenieria = 160 + (117 / 3) + (117 / 3 / 2) - (50 / 2)
-        x_clinico = 160 + (117 / 3 * 2) + (117 / 3 / 2) - (50 / 2)
+        # Repartimos el ancho (117 mm) en 2 columnas de 50 mm con centrado
+        ancho_area = 117
+        ancho_caja = 50
+        x_izq = 160 + (ancho_area/4) - (ancho_caja/2)     # columna 1 centrada
+        x_der = 160 + (3*ancho_area/4) - (ancho_caja/2)   # columna 2 centrada
 
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         
-        add_signature_to_pdf(pdf, canvas_result_tecnico, x_tecnico, y_firma_image)
-        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_ingenieria, y_firma_image)
-        add_signature_to_pdf(pdf, canvas_result_clinico, x_clinico, y_firma_image)
+        # Firmas (ya NO incluye firma del técnico aquí abajo)
+        add_signature_to_pdf(pdf, canvas_result_ingenieria, x_izq, y_firma_image)
+        add_signature_to_pdf(pdf, canvas_result_clinico, x_der, y_firma_image)
 
-        y_firma_text = y_firma_start + 25
-        pdf.set_y(y_firma_text)
-        
-        pdf.set_x(x_tecnico)
-        pdf.cell(50, 4, "_________________________", 0, 0, 'C')
-        pdf.set_x(x_ingenieria)
-        pdf.cell(50, 4, "_________________________", 0, 0, 'C')
-        pdf.set_x(x_clinico)
-        pdf.cell(50, 4, "_________________________", 0, 1, 'C')
-        
-        pdf.set_y(pdf.get_y() - 1)
+        y_lineas = y_firma_start + 25
+        pdf.set_y(y_lineas)
+
+        # líneas
+        pdf.set_x(x_izq)
+        pdf.cell(ancho_caja, 4, "_________________________", 0, 0, 'C')
+        pdf.set_x(x_der)
+        pdf.cell(ancho_caja, 4, "_________________________", 0, 1, 'C')
+
+        # rótulos (dos líneas cada uno)
+        label_y = pdf.get_y() - 1
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(x_tecnico)
-        pdf.cell(50, 4, "TÉCNICO ENCARGADO", 0, 0, 'C')
-        pdf.set_x(x_ingenieria)
-        pdf.cell(50, 4, "INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_x(x_clinico)
-        pdf.cell(50, 4, "PERSONAL CLÍNICO", 0, 1, 'C')
+
+        # IZQUIERDA
+        pdf.set_xy(x_izq, label_y)
+        pdf.cell(ancho_caja, 4, "RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_izq, label_y + 4)
+        pdf.cell(ancho_caja, 4, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
+
+        # DERECHA
+        pdf.set_xy(x_der, label_y)
+        pdf.cell(ancho_caja, 4, "RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_der, label_y + 4)
+        pdf.cell(ancho_caja, 4, "PERSONAL CLÍNICO", 0, 0, 'C')
+
+        # deja el cursor por debajo de ambos rótulos
+        pdf.set_y(label_y + 10)
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(), file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
