@@ -222,7 +222,6 @@ def main():
         pdf.add_page()
 
         # ======= ENCABEZADO =======
-        # Logo (lo dejamos "así" como pediste)
         logo_x, logo_y = 2, 2
         desired_logo_w = 58
         sep = 4
@@ -241,25 +240,21 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris: debe llegar HASTA el margen derecho de la 1ª columna (x = 160)
+        # Fila gris: letra más chica y ALARGADA hasta el margen de la 1ª columna (x=160)
         first_col_left = 22
-        first_col_right = 160  # <- margen de la primera columna
-        pdf.set_font("Arial", "B", 8)
-        text_w = pdf.get_string_width(title_text)
-        pad = 6
-        cell_w = text_w + pad
+        first_col_right = 160  # margen de la primera columna
+        pdf.set_font("Arial", "B", 7)  # ↓ letra más pequeña para "PAUTA..."
+        title_h = 6
 
         title_x = logo_x + desired_logo_w + sep
         top_offset = 18
         title_y = max(logo_y + 2, top_offset)
 
-        # Limitar ancho para que termine EXACTO en x = 160
-        max_w_by_column = max(10, first_col_right - title_x)  # al menos 10mm
-        cell_w = min(cell_w, max_w_by_column)
+        # La alargamos EXACTO hasta x = 160
+        cell_w = max(10, first_col_right - title_x)
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
-        title_h = 6
         pdf.set_xy(title_x, title_y)
         pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
@@ -294,11 +289,9 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=first_col_left)
 
         # ======= COLUMNA DERECHA =======
-        # SUBIR PUNTO 5 +2 mm respecto a lo anterior (sin solapar el encabezado).
-        # Antes: y = header_bottom + 1 → Ahora: y = header_bottom (sube 1 mm) + 1 mm adicional IMPOSIBLE sin solape.
-        # Usamos el mínimo seguro: justo debajo del encabezado.
+        # Punto 5 ARRIBA del encabezado: comenzamos muy arriba (no hay franja ni logo en x>=160)
         second_col_left = first_col_right
-        y_column_start_right = header_bottom  # <- lo más arriba posible sin solapar (efecto +2)
+        y_column_start_right = 6.0  # ~6 mm desde el borde superior → arriba del encabezado
         pdf.set_y(y_column_start_right)
 
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=second_col_left)
