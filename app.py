@@ -89,30 +89,34 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5, label_w=3
     pdf.cell(6, size, "NO", 0, 1)
 
 # ========= TABLAS: cabecera plomito (título + OK/NO/N/A en una sola fila)
-#         Solo OK/NO/N/A con bordes; columna del ítem sin borde
-def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=4.0, head_fs=7, cell_fs=6):
-    # Cabecera plomito (misma fila: título + OK/NO/N/A)
+#         - Cabecera con borde completo
+#         - Subtítulos numerados con tabulación (indentación real en mm)
+#         - OK/NO/N/A mismo tamaño (mismo col_w y row_h)
+def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=4.0, head_fs=7, cell_fs=6, indent_w=3.0):
+    # Cabecera plomito
     pdf.set_x(x_pos)
-    pdf.set_fill_color(230, 230, 230)               # plomito
+    pdf.set_fill_color(230, 230, 230)  # plomito
     pdf.set_text_color(0, 0, 0)
 
+    # Título con borde y celdas OK/NO/N/A con borde; misma altura/anchos
     pdf.set_font("Arial", "B", head_fs)
-    pdf.cell(item_w, row_h, section_title, border=0, ln=0, align="L", fill=True)
-
+    pdf.cell(item_w, row_h, section_title, border=1, ln=0, align="L", fill=True)
     pdf.set_font("Arial", "B", cell_fs)
     pdf.cell(col_w, row_h, "OK",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
-    # Filas: ítem sin borde; OK/NO/N/A con borde
+    # Filas: ítem sin borde (con indentación), OK/NO/N/A con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
-        pdf.cell(item_w, row_h, item, border=0, ln=0, align="L")
+        # Tabulación real: cajita vacía (indent_w) + texto del ítem (item_w - indent_w)
+        pdf.cell(indent_w, row_h, "", border=0, ln=0)
+        pdf.cell(max(1, item_w - indent_w), row_h, item, border=0, ln=0, align="L")
         pdf.cell(col_w, row_h, "X" if value == "OK" else "", border=1, ln=0, align="C")
         pdf.cell(col_w, row_h, "X" if value == "NO" else "", border=1, ln=0, align="C")
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
-    pdf.ln(1.5)
+    pdf.ln(1.8)
 
 # ========= app =========
 def main():
@@ -221,7 +225,7 @@ def main():
                                           key="canvas_tecnico")
     with col_ingenieria:
         st.write("Ingeniería Clínica:")
-        canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+        canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 3)", stroke_width=2, stroke_color="#000000",
                                              background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
                                              key="canvas_ingenieria")
     with col_clinico:
@@ -301,27 +305,28 @@ def main():
         pdf.cell(0, line_h, f"Ubicación: {ubicacion}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, line_h, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
-        pdf.ln(0.5)
 
-        # Tablas de la primera columna (1 a 5)
+        # —— separación extra entre FECHA y el PRIMER TÍTULO ——
+        pdf.ln(3.0)
+
         LEFT_ROW_H = 3.1
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
 
         pdf.ln(2.5)  # espacio inferior en la 1ª columna
 
         # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=SECOND_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=4.0, head_fs=7, cell_fs=6)
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0, head_fs=7, cell_fs=6, indent_w=3.0)
 
         # ---------- Instrumentos de análisis ----------
         pdf.set_x(SECOND_COL_LEFT)
