@@ -16,60 +16,73 @@ from reportlab.lib.utils import ImageReader
 # ============================== Base de posiciones (mm) ==============================
 MM = 2.83465  # 1 mm = 2.83465 pt
 
+# ¡Ajustado! Estas coordenadas caen mejor sobre la pauta que mostraste.
 BASE = {
-    # Cabecera (se escribe SOBRE las líneas punteadas)
+    # Cabecera (se escribe SOBRE las líneas punteadas de la izquierda y la caja FECHA)
     "cab": {
-        "marca":  {"x": 58,  "y": 35},
-        "modelo": {"x": 58,  "y": 42},
-        "sn":     {"x": 58,  "y": 49},
-        "ninv":   {"x": 58,  "y": 56},
-        "ubic":   {"x": 58,  "y": 63},
-        "fecha":  {"x": 233, "y": 35},
+        "marca":  {"x": 62,  "y": 35},
+        "modelo": {"x": 62,  "y": 42},
+        "sn":     {"x": 62,  "y": 49},
+        "ninv":   {"x": 62,  "y": 56},
+        "ubic":   {"x": 62,  "y": 63},
+        "fecha":  {"x": 232, "y": 35},
     },
-    # Checks izquierda (bloques 1..4). Centros de casillas OK/NO/N/A
+
+    # Checks izquierda (bloques 1..4). Centros de casillas OK/NO/N/A — AJUSTADOS
     "checks_left": {
-        "ok": 150, "no": 160, "na": 170,
+        "ok": 144, "no": 153, "na": 162,   # ← mueve toda la columna si hiciera falta
         "row_h": 6.0,
         "sec1_y":  72,  "sec1_n": 4,   # 1. Chequeo Visual
         "sec2_y": 104,  "sec2_n": 4,   # 2. Alta Presión
         "sec3_y": 141,  "sec3_n": 9,   # 3. Baja presión
         "sec4_y": 192,  "sec4_n": 7,   # 4. Absorbedor
     },
-    # Checks derecha (bloques 5..6)
+
+    # Checks derecha (bloques 5..6) — AJUSTADOS
     "checks_right": {
-        "ok": 292, "no": 302, "na": 312,
+        "ok": 283, "no": 292, "na": 301,
         "row_h": 6.0,
         "sec5a_y":  47,  "sec5a_n": 6,  # 5.1..5.6
         "sec5b_y":  83,  "sec5b_n": 2,  # 5.7..5.8
         "sec6_y":  106, "sec6_n": 3,    # 6. Seguridad eléctrica
     },
-    # 7. Instrumentos de análisis (dos bloques a la derecha)
-    "ia": {
-        "eq1": {"x": 214, "y": 133},
-        "ma1": {"x": 214, "y": 140},
-        "mo1": {"x": 214, "y": 147},
-        "se1": {"x": 214, "y": 154},
 
-        "eq2": {"x": 272, "y": 133},
-        "ma2": {"x": 272, "y": 140},
-        "mo2": {"x": 272, "y": 147},
-        "se2": {"x": 272, "y": 154},
+    # 7. Instrumentos de análisis (dos bloques a la derecha) — AJUSTADOS
+    "ia": {
+        "eq1": {"x": 215, "y": 133},
+        "ma1": {"x": 215, "y": 140},
+        "mo1": {"x": 215, "y": 147},
+        "se1": {"x": 215, "y": 154},
+
+        "eq2": {"x": 273, "y": 133},
+        "ma2": {"x": 273, "y": 140},
+        "mo2": {"x": 273, "y": 147},
+        "se2": {"x": 273, "y": 154},
     },
+
     # Observaciones (caja grande derecha)
     "obs": {"x": 198, "y": 163, "line_h": 5.8, "max_lines": 6},
+
     # Equipo operativo (línea)
     "operativo": {"x": 198, "y": 179},
+
     # Técnico + caja de firma (pequeña, a la derecha del nombre)
     "tecnico": {"x": 198, "y": 186},
     "firma_tec_box": {"x": 265, "y": 181, "w": 38, "h": 12},
+
     # Empresa responsable (línea)
     "empresa": {"x": 198, "y": 194},
+
     # Observaciones uso interno (caja ancha inferior)
     "obs_int": {"x": 28, "y": 206, "line_h": 5.8, "max_lines": 4},
+
     # Recepción conforme (dos firmas sobre las líneas)
     "rc_ing": {"x": 70,  "y": 226, "w": 62, "h": 15},
     "rc_cli": {"x": 210, "y": 226, "w": 62, "h": 15},
 }
+
+# Offset vertical fino para centrar la “X” en cada casilla (positivo = baja la X)
+CHECK_Y_OFFSET = 0.8  # mm (fino)
 
 # ========================= Calibración (sliders opcionales) =========================
 with st.sidebar:
@@ -79,6 +92,7 @@ with st.sidebar:
     cab_dx  = st.number_input("ΔX cabecera", -5.0, 5.0, 0.0, 0.5)
     cab_dy  = st.number_input("ΔY cabecera", -5.0, 5.0, 0.0, 0.5)
     l_dx    = st.number_input("ΔX checks izquierda", -5.0, 5.0, 0.0, 0.5)
+    l_dy    = st.number_input("ΔY checks izquierda", -5.0, 5.0, 0.0, 0.5)
     r_dx    = st.number_input("ΔX checks derecha", -5.0, 5.0, 0.0, 0.5)
     r_dy    = st.number_input("ΔY checks derecha", -5.0, 5.0, 0.0, 0.5)
     ia_dx   = st.number_input("ΔX instrumentos", -5.0, 5.0, 0.0, 0.5)
@@ -141,7 +155,7 @@ items2 = ["2.1. Chequeo de yugo de O2, N2O, Aire", "2.2. Revisión o reemplazo d
           "2.3. Verificación de entrada de presión", "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"]
 items3 = ["3.1. Revisión y calibración de válvula de flujómetro de N2O", "3.2. Revisión y calibración de válvula de flujometro de O2",
           "3.3. Revisión y calibración de válvula de flujometro de Aire", "3.4. Chequeo de fugas", "3.5. Verificación de flujos",
-          "3.6. Verificación de regulador de 2da etapa", "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
+          "3.6. Verificación de regulador de 2da (segunda) etapa", "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
           "3.8. Revisión de sistema proporción de O2/N2O", "3.9. Revisión de manifold de vaporizadores"]
 items4 = ["4.1. Revisión o reemplazo de empaquetadura de canister", "4.2. Revisión de válvula APL",
           "4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)", "4.4. Revisión de válvula inhalatoria",
@@ -217,50 +231,37 @@ def build_overlay(template_path="MAQ ANESTESIA_V2.pdf"):
 
     def x_mark(cx_mm, y_mm):
         c.setFont("Helvetica-Bold", 10)
-        c.drawCentredString(cx_mm * MM, H - (y_mm - 3) * MM, "X")
+        # +CHECK_Y_OFFSET corrige el centrado vertical de la X en la casilla
+        c.drawCentredString(cx_mm * MM, H - (y_mm + CHECK_Y_OFFSET) * MM, "X")
 
     # CABECERA
-    for k in ("marca", "modelo", "sn", "ninv", "ubic"):
+    for k, val in [
+        ("marca", marca), ("modelo", modelo), ("sn", sn),
+        ("ninv", n_inv), ("ubic", ubic)
+    ]:
         x, y = BASE["cab"][k]["x"], BASE["cab"][k]["y"]
         x, y = P(x, y, cab_dx, cab_dy)
-        val = {"marca": marca, "modelo": modelo, "sn": sn, "ninv": n_inv, "ubic": ubic}[k]
         text_at(val, x, y)
     x, y = P(BASE["cab"]["fecha"]["x"], BASE["cab"]["fecha"]["y"], cab_dx, cab_dy)
     text_at(fecha.strftime("%d/%m/%Y"), x, y)
 
     # CHECKS IZQUIERDA
     L = BASE["checks_left"]
-    y = L["sec1_y"] + glob_dy
-    for sel in res1:
-        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
-        y += L["row_h"]
-    y = L["sec2_y"] + glob_dy
-    for sel in res2:
-        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
-        y += L["row_h"]
-    y = L["sec3_y"] + glob_dy
-    for sel in res3:
-        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
-        y += L["row_h"]
-    y = L["sec4_y"] + glob_dy
-    for sel in res4:
-        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
-        y += L["row_h"]
+    for sec_y, items in [(L["sec1_y"], res1), (L["sec2_y"], res2), (L["sec3_y"], res3), (L["sec4_y"], res4)]:
+        y = sec_y + l_dy + glob_dy
+        for sel in items:
+            cx = {"OK": L["ok"] + l_dx + glob_dx, "NO": L["no"] + l_dx + glob_dx, "N/A": L["na"] + l_dx + glob_dx}[sel]
+            x_mark(cx, y)
+            y += L["row_h"]
 
     # CHECKS DERECHA
     R = BASE["checks_right"]
-    y = R["sec5a_y"] + r_dy + glob_dy
-    for sel in res5[:6]:
-        x_mark({"OK": R["ok"]+r_dx+glob_dx, "NO": R["no"]+r_dx+glob_dx, "N/A": R["na"]+r_dx+glob_dx}[sel], y)
-        y += R["row_h"]
-    y = R["sec5b_y"] + r_dy + glob_dy
-    for sel in res5[6:]:
-        x_mark({"OK": R["ok"]+r_dx+glob_dx, "NO": R["no"]+r_dx+glob_dx, "N/A": R["na"]+r_dx+glob_dx}[sel], y)
-        y += R["row_h"]
-    y = R["sec6_y"] + r_dy + glob_dy
-    for sel in res6:
-        x_mark({"OK": R["ok"]+r_dx+glob_dx, "NO": R["no"]+r_dx+glob_dx, "N/A": R["na"]+r_dx+glob_dx}[sel], y)
-        y += R["row_h"]
+    for sec_y, items in [(R["sec5a_y"], res5[:6]), (R["sec5b_y"], res5[6:]), (R["sec6_y"], res6)]:
+        y = sec_y + r_dy + glob_dy
+        for sel in items:
+            cx = {"OK": R["ok"] + r_dx + glob_dx, "NO": R["no"] + r_dx + glob_dx, "N/A": R["na"] + r_dx + glob_dx}[sel]
+            x_mark(cx, y)
+            y += R["row_h"]
 
     # 7. INSTRUMENTOS
     for key, val in [("eq1", eq1), ("ma1", ma1), ("mo1", mo1), ("se1", se1),
