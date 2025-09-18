@@ -29,49 +29,118 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
     
     pdf.ln(2)
 
+def _crop_signature(canvas_result):
+    """Devuelve BytesIO de la firma recortada (elimina fondo), o None si está vacía."""
+    if canvas_result.image_data is None:
+        return None
+
+    img_array = canvas_result.image_data.astype(np.uint8)
+    img = Image.fromarray(img_array)
+
+    gray_img = img.convert('L')
+    threshold = 230
+    coords = np.argwhere(np.array(gray_img) < threshold)
+
+    if coords.size == 0:
+        return None
+    
+    min_y, min_x = coords.min(axis=0)
+    max_y, max_x = coords.max(axis=0)
+    cropped_img = img.crop((min_x, min_y, max_x + 1, max_y + 1))
+    if cropped_img.mode == 'RGBA':
+        cropped_img = cropped_img.convert('RGB')
+    
+    img_byte_arr = io.BytesIO()
+    cropped_img.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    return img_byte_arr
+
 def add_signature_to_pdf(pdf_obj, canvas_result, x_start_of_box, y):
-    if canvas_result.image_data is not None:
-        img_array = canvas_result.image_data.astype(np.uint8)
-        img = Image.fromarray(img_array)
+    """(Se mantiene para las firmas de la sección inferior)"""
+    img_byte_arr = _crop_signature(canvas_result)
+    if not img_byte_arr:
+        return
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+        tmp_file.write(img_byte_arr.read())
+        tmp_path = tmp_file.name
+    
+    # Dimensiones objetivo (mm)
+    desired_img_width_mm = 40
+    img = Image.open(tmp_path)
+    img_height_mm = (img.height / img.width) * desired_img_width_mm
+    max_height = 20
+    if img_height_mm > max_height:
+        img_height_mm = max_height
+        desired_img_width_mm = (img.width / img.height) * img_height_mm
 
-        gray_img = img.convert('L')
-        threshold = 230
-        coords = np.argwhere(np.array(gray_img) < threshold)
+    center_of_area_x = x_start_of_box + (50 / 2)
+    image_x = center_of_area_x - (desired_img_width_mm / 2)
+    
+    try:
+        pdf_obj.image(tmp_path, x=image_x, y=y, w=desired_img_width_mm, h=img_height_mm)
+    except Exception as e:
+        st.error(f"Error al añadir imagen: {e}")
 
-        if coords.size == 0:
-            return
-        
-        min_y, min_x = coords.min(axis=0)
-        max_y, max_x = coords.max(axis=0)
-        
-        cropped_img = img.crop((min_x, min_y, max_x + 1, max_y + 1))
-        
-        if cropped_img.mode == 'RGBA':
-            cropped_img = cropped_img.convert('RGB')
-        
-        img_byte_arr = io.BytesIO()
-        cropped_img.save(img_byte_arr, format='PNG')
-        img_byte_arr.seek(0)
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
-            tmp_file.write(img_byte_arr.read())
-            tmp_path = tmp_file.name
-        
-        desired_img_width_mm = 40
-        img_height_mm = (cropped_img.height / cropped_img.width) * desired_img_width_mm
-        
-        max_height = 20
-        if img_height_mm > max_height:
-            img_height_mm = max_height
-            desired_img_width_mm = (cropped_img.width / cropped_img.height) * img_height_mm
+def add_signature_in_box(pdf_obj, canvas_result, x, y, w_mm=40, h_mm=12, draw_border=True):
+    """
+    Inserta la firma recortada centrada dentro de una caja (x,y,w,h) en mm.
+    Dibuja el borde de la caja si draw_border=True.
+    """
+    if draw_border:
+        pdf_obj.rect(x, y, w_mm, h_mm)
 
-        center_of_area_x = x_start_of_box + (50 / 2)
-        image_x = center_of_area_x - (desired_img_width_mm / 2)
-        
-        try:
-            pdf_obj.image(tmp_path, x=image_x, y=y, w=desired_img_width_mm, h=img_height_mm)
-        except Exception as e:
-            st.error(f"Error al añadir imagen: {e}")
+    img_byte_arr = _crop_signature(canvas_result)
+    if not img_byte_arr:
+        return
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+        tmp_file.write(img_byte_arr.read())
+        tmp_path = tmp_file.name
+
+    try:
+        img = Image.open(tmp_path)
+        # Escalado para que quepa respetando aspecto
+        img_w_mm = w_mm
+        img_h_mm = (img.height / img.width) * img_w_mm
+        if img_h_mm > h_mm:
+            img_h_mm = h_mm
+            img_w_mm = (img.width / img.height) * img_h_mm
+
+        # Centrado dentro de la caja
+        draw_x = x + (w_mm - img_w_mm) / 2.0
+        draw_y = y + (h_mm - img_h_mm) / 2.0
+        pdf_obj.image(tmp_path, x=draw_x, y=draw_y, w=img_w_mm, h=img_h_mm)
+    except Exception as e:
+        st.error(f"Error al añadir imagen (inline): {e}")
+
+def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5):
+    """
+    Dibuja 'Equipo Operativo: [ ] SI   [ ] NO' con casillas.
+    - x,y: inicio del rótulo (mm)
+    - selected: "SI" o "NO"
+    """
+    pdf.set_font("Arial", "", 7)
+    label_w = 32  # ancho del texto 'Equipo Operativo:'
+    # rótulo
+    pdf.set_xy(x, y)
+    pdf.cell(label_w, size, "Equipo Operativo:", 0, 0)
+
+    # casilla SI
+    x_box_si = x + label_w + 2
+    pdf.rect(x_box_si, y, size, size)
+    pdf.set_xy(x_box_si, y)
+    pdf.cell(size, size, "X" if selected == "SI" else "", 0, 0, "C")
+    pdf.set_xy(x_box_si + size + text_gap, y)
+    pdf.cell(6, size, "SI", 0, 0)
+
+    # casilla NO
+    x_box_no = x_box_si + size + text_gap + 6 + gap
+    pdf.rect(x_box_no, y, size, size)
+    pdf.set_xy(x_box_no, y)
+    pdf.cell(size, size, "X" if selected == "NO" else "", 0, 0, "C")
+    pdf.set_xy(x_box_no + size + text_gap, y)
+    pdf.cell(6, size, "NO", 0, 1)  # ln=1 para salto de línea
 
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -283,7 +352,6 @@ def main():
         pdf.cell(0, 3.5, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 7)
         pdf.set_x(160)
-        # Se define un ancho de 115mm para que el texto se alinee con las tablas
         pdf.multi_cell(115, 3.5, f"{observaciones}")
         pdf.ln(1)
         
@@ -292,19 +360,35 @@ def main():
         pdf.cell(0, 3.5, "Observaciones (uso interno):", ln=True)
         pdf.set_font("Arial", "", 7)
         pdf.set_x(160)
-        # Se define un ancho de 115mm para que el texto se alinee con las tablas
         pdf.multi_cell(115, 3.5, f"{observaciones_interno}")
         pdf.ln(1)
-        
+
+        # === Equipo Operativo con casillas SI/NO ===
+        y_equipo_op = pdf.get_y()
+        draw_si_no_boxes(pdf, x=160, y=y_equipo_op, selected=operativo, size=4)
+        pdf.ln(2)  # pequeño espacio tras la línea
+
+        # === Nombre Técnico/Ingeniero con firma a la derecha ===
         pdf.set_x(160)
-        pdf.cell(0, 3.5, f"Equipo Operativo: {operativo}", ln=True)
-        
-        pdf.set_x(160)
-        pdf.cell(0, 3.5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 1)
+        pdf.set_font("Arial", "", 7)
+        y_nombre = pdf.get_y()
+        # Ancho reservado para texto del nombre
+        name_box_w = 70
+        pdf.cell(name_box_w, 5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 0, "L")
+
+        # Caja de firma a la derecha del nombre (40x12 mm aprox)
+        sig_w, sig_h = 40, 12
+        x_sig = 160 + name_box_w + 5
+        y_sig = y_nombre
+        add_signature_in_box(pdf, canvas_result_tecnico, x=x_sig, y=y_sig, w_mm=sig_w, h_mm=sig_h, draw_border=True)
+        # Forzar salto a la altura de la firma para no solapar la siguiente línea
+        pdf.set_y(y_sig + sig_h + 2)
+
+        # Empresa
         pdf.set_x(160)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # --- SECCIÓN DE FIRMAS ---
+        # --- SECCIÓN DE FIRMAS (se mantiene) ---
         pdf.ln(5) 
         
         x_tecnico = 160 + (117 / 3 / 2) - (50 / 2)
