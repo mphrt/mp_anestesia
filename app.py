@@ -88,26 +88,30 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5, label_w=3
     pdf.set_xy(x_box_no + size + text_gap, y)
     pdf.cell(6, size, "NO", 0, 1)
 
-# tabla checklists (tamaños configurables)
+# ========= TABLAS: cabecera plomito (título + OK/NO/N/A en una sola fila)
+#         Solo OK/NO/N/A con bordes; columna del ítem sin borde
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=4.0, head_fs=7, cell_fs=6):
+    # Cabecera plomito (misma fila: título + OK/NO/N/A)
     pdf.set_x(x_pos)
+    pdf.set_fill_color(230, 230, 230)               # plomito
+    pdf.set_text_color(0, 0, 0)
+
     pdf.set_font("Arial", "B", head_fs)
-    pdf.cell(0, row_h, section_title, ln=True, border=0)
+    pdf.cell(item_w, row_h, section_title, border=0, ln=0, align="L", fill=True)
 
-    pdf.set_x(x_pos)
-    pdf.set_font("Arial", "", cell_fs)
-    pdf.cell(item_w, row_h, "", 0)
-    pdf.cell(col_w, row_h, "OK", 1, 0, "C")
-    pdf.cell(col_w, row_h, "NO", 1, 0, "C")
-    pdf.cell(col_w, row_h, "N/A", 1, 1, "C")
+    pdf.set_font("Arial", "B", cell_fs)
+    pdf.cell(col_w, row_h, "OK",  border=1, ln=0, align="C", fill=True)
+    pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
+    pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
+    # Filas: ítem sin borde; OK/NO/N/A con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
-        pdf.cell(item_w, row_h, item, 1, 0)
-        pdf.cell(col_w, row_h, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(col_w, row_h, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(col_w, row_h, "X" if value == "N/A" else "", 1, 1, "C")
+        pdf.cell(item_w, row_h, item, border=0, ln=0, align="L")
+        pdf.cell(col_w, row_h, "X" if value == "OK" else "", border=1, ln=0, align="C")
+        pdf.cell(col_w, row_h, "X" if value == "NO" else "", border=1, ln=0, align="C")
+        pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.5)
 
 # ========= app =========
@@ -232,7 +236,6 @@ def main():
 
         pdf = FPDF('L', 'mm', 'A4')
         pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
-        # Reservamos un poco más de margen inferior para "dejar espacio abajo"
         pdf.set_auto_page_break(True, margin=TOP_MARGIN + 8)
         pdf.add_page()
 
@@ -243,7 +246,7 @@ def main():
         FIRST_COL_LEFT = SIDE_MARGIN
         usable_w = page_w - 2*SIDE_MARGIN
         col_total_w = (usable_w - COL_GAP) / 2.0
-        COL_W = 11.0  # un pelín más angosta cada casilla para ganar alto
+        COL_W = 11.0
         ITEM_W = max(60.0, col_total_w - 3 * COL_W)
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
@@ -286,7 +289,7 @@ def main():
         # ======= COLUMNA IZQUIERDA =======
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7)
-        line_h = 3.5  # un poco más compacto que 4
+        line_h = 3.5
         pdf.cell(0, line_h, f"Marca: {marca}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, line_h, f"Modelo: {modelo}", 0, 1)
@@ -300,7 +303,7 @@ def main():
         pdf.cell(0, line_h, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(0.5)
 
-        # Tablas de la primera columna (1 a 5) con filas compactas para que quepan
+        # Tablas de la primera columna (1 a 5)
         LEFT_ROW_H = 3.1
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
@@ -310,18 +313,13 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
-        # >>> MOVIDO a PRIMERA COLUMNA <<<
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5)
 
-        # Dejar espacio inferior explícito en la 1ª columna
-        pdf.ln(2.5)
+        pdf.ln(2.5)  # espacio inferior en la 1ª columna
 
         # ======= COLUMNA DERECHA =======
-        # Reiniciamos el cursor vertical a la parte superior de contenido
         pdf.set_y(content_y_base)
-
-        # Ahora la segunda columna inicia desde el punto 6
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=SECOND_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=4.0, head_fs=7, cell_fs=6)
 
