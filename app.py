@@ -451,12 +451,12 @@ def main():
         # ---------- Firmas de recepción (centradas EXACTO sobre el texto) ----------
         # Centro de cada bloque (cuartos de la 2ª columna)
         ancho_area = col_total_w
-        center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
-        center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
+        center_left  = SECOND_COL_LEFT + (ancho_area * 0.50)
+        center_right = SECOND_COL_LEFT + (ancho_area * 1)
 
         # Dimensión deseada de la firma
-        sig_recep_w = 58
-        sig_recep_h = 16
+        sig_recep_w = 65
+        sig_recep_h = 20
 
         # Calcular ancho “ancla” según el texto en negrita (para centrar todo igual)
         pdf.set_font("Arial", "B", 7.5)
