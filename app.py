@@ -248,9 +248,9 @@ def main():
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
         # ======= ENCABEZADO =======
-        # Logo: un poco más chico
+        # Logo: (MISMO TAMAÑO que el código pasado)
         logo_x, logo_y = 2, 2
-        desired_logo_w = 48  # ↓ antes ~58
+        desired_logo_w = 48  # ← se mantiene igual
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
@@ -266,11 +266,11 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris: alineada a la ALTURA de la parte de ABAJO del logo
+        # Franja gris: (MISMO COMPORTAMIENTO) alineada al borde inferior del logo
         pdf.set_font("Arial", "B", 7)
         title_h = 6
         title_x = logo_x + desired_logo_w + sep
-        title_y = logo_y + logo_h  # ← top de la franja justo donde termina el logo
+        title_y = logo_y + logo_h  # ← igual que antes
         cell_w = max(10, FIRST_TAB_RIGHT - title_x)  # termina en el borde derecho de la 1ª tabla
 
         pdf.set_fill_color(230, 230, 230)
