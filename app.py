@@ -1,90 +1,105 @@
 # app.py
-# -----------------------------------------------------------
-# Pauta Mantención Máquina de Anestesia (V2) - PDF idéntico a la plantilla
-# Genera un PDF 1:1 usando MAQ ANESTESIA_V2.pdf como fondo (A4 landscape)
+# -----------------------------------------------------------------------------------
+# MP Anestesia V2 — Salida PDF idéntica a la plantilla (A4 horizontal, 1:1)
 # Requisitos: streamlit, pillow, numpy, streamlit-drawable-canvas, reportlab, pypdf
-# -----------------------------------------------------------
+# -----------------------------------------------------------------------------------
 
 import streamlit as st
 import datetime, io, numpy as np
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 
-# PDF: fondo + superposición
 from pypdf import PdfReader, PdfWriter, PageObject
 from reportlab.pdfgen import canvas as rl_canvas
 from reportlab.lib.utils import ImageReader
 
-# ============= Config posiciones (en mm) calibradas para MAQ ANESTESIA_V2.pdf =============
-MM = 2.83465  # 1 mm en puntos
+# ============================== Base de posiciones (mm) ==============================
+MM = 2.83465  # 1 mm = 2.83465 pt
 
-CFG_POS = {
-    # --- Cabecera izquierda/derecha (se escribe sobre líneas punteadas) ---
+BASE = {
+    # Cabecera (se escribe SOBRE las líneas punteadas)
     "cab": {
-        "marca":  {"x": 42,  "y": 35, "w": 60},   # MARCA (izq)
-        "modelo": {"x": 42,  "y": 42, "w": 60},   # MODELO (izq)
-        "sn":     {"x": 42,  "y": 49, "w": 60},   # S/N (izq)
-        "ninv":   {"x": 42,  "y": 56, "w": 60},   # N/INVENTARIO (izq)
-        "ubic":   {"x": 42,  "y": 63, "w": 60},   # UBICACIÓN (izq)
-        "fecha":  {"x": 215, "y": 35, "w": 32},   # FECHA (caja derecha)
+        "marca":  {"x": 58,  "y": 35},
+        "modelo": {"x": 58,  "y": 42},
+        "sn":     {"x": 58,  "y": 49},
+        "ninv":   {"x": 58,  "y": 56},
+        "ubic":   {"x": 58,  "y": 63},
+        "fecha":  {"x": 233, "y": 35},
     },
-
-    # --- Columnas de checks (X) ---
-    # Bloques 1..4 (lado izquierdo)
+    # Checks izquierda (bloques 1..4). Centros de casillas OK/NO/N/A
     "checks_left": {
-        "ok":  140, "no": 150, "na": 160,  # centros columnas OK/NO/N/A (mm)
+        "ok": 150, "no": 160, "na": 170,
         "row_h": 6.0,
         "sec1_y":  72,  "sec1_n": 4,   # 1. Chequeo Visual
         "sec2_y": 104,  "sec2_n": 4,   # 2. Alta Presión
         "sec3_y": 141,  "sec3_n": 9,   # 3. Baja presión
         "sec4_y": 192,  "sec4_n": 7,   # 4. Absorbedor
     },
-    # Bloques 5..6 (lado derecho)
+    # Checks derecha (bloques 5..6)
     "checks_right": {
-        "ok":  282, "no": 292, "na": 302,
+        "ok": 292, "no": 302, "na": 312,
         "row_h": 6.0,
         "sec5a_y":  47,  "sec5a_n": 6,  # 5.1..5.6
         "sec5b_y":  83,  "sec5b_n": 2,  # 5.7..5.8
         "sec6_y":  106, "sec6_n": 3,    # 6. Seguridad eléctrica
     },
-
-    # --- 7. Instrumentos de análisis (dos bloques, lado derecho) ---
+    # 7. Instrumentos de análisis (dos bloques a la derecha)
     "ia": {
-        "eq1": {"x": 206, "y": 133, "w": 40},
-        "ma1": {"x": 206, "y": 140, "w": 40},
-        "mo1": {"x": 206, "y": 147, "w": 40},
-        "se1": {"x": 206, "y": 154, "w": 40},
+        "eq1": {"x": 214, "y": 133},
+        "ma1": {"x": 214, "y": 140},
+        "mo1": {"x": 214, "y": 147},
+        "se1": {"x": 214, "y": 154},
 
-        "eq2": {"x": 264, "y": 133, "w": 40},
-        "ma2": {"x": 264, "y": 140, "w": 40},
-        "mo2": {"x": 264, "y": 147, "w": 40},
-        "se2": {"x": 264, "y": 154, "w": 40},
+        "eq2": {"x": 272, "y": 133},
+        "ma2": {"x": 272, "y": 140},
+        "mo2": {"x": 272, "y": 147},
+        "se2": {"x": 272, "y": 154},
     },
-
-    # --- Observaciones (caja grande derecha) ---
-    "obs": {"x": 190, "y": 163, "w": 112, "line_h": 5.8, "max_lines": 6},
-
-    # --- Equipo operativo (SI/NO) en línea ---
-    "operativo": {"x": 190, "y": 179, "w": 70},
-
-    # --- Técnico + firma (caja) ---
-    "tecnico": {"x": 190, "y": 186, "w": 85},
-    "firma_tec_box": {"x": 257, "y": 181, "w": 38, "h": 12},  # caja firma técnico (mm)
-
-    # --- Empresa responsable ---
-    "empresa": {"x": 190, "y": 194, "w": 90},
-
-    # --- Observaciones (uso interno) ---
-    "obs_int": {"x": 20, "y": 206, "w": 265, "line_h": 5.8, "max_lines": 4},
-
-    # --- Recepción conforme (firmas) ---
-    "rc_ing": {"x": 62,  "y": 226, "w": 62, "h": 15},
-    "rc_cli": {"x": 202, "y": 226, "w": 62, "h": 15},
+    # Observaciones (caja grande derecha)
+    "obs": {"x": 198, "y": 163, "line_h": 5.8, "max_lines": 6},
+    # Equipo operativo (línea)
+    "operativo": {"x": 198, "y": 179},
+    # Técnico + caja de firma (pequeña, a la derecha del nombre)
+    "tecnico": {"x": 198, "y": 186},
+    "firma_tec_box": {"x": 265, "y": 181, "w": 38, "h": 12},
+    # Empresa responsable (línea)
+    "empresa": {"x": 198, "y": 194},
+    # Observaciones uso interno (caja ancha inferior)
+    "obs_int": {"x": 28, "y": 206, "line_h": 5.8, "max_lines": 4},
+    # Recepción conforme (dos firmas sobre las líneas)
+    "rc_ing": {"x": 70,  "y": 226, "w": 62, "h": 15},
+    "rc_cli": {"x": 210, "y": 226, "w": 62, "h": 15},
 }
 
-# ============= Helpers de firmas y texto =============
+# ========================= Calibración (sliders opcionales) =========================
+with st.sidebar:
+    st.header("Calibración (mm)")
+    glob_dx = st.number_input("ΔX global", -10.0, 10.0, 0.0, 0.5)
+    glob_dy = st.number_input("ΔY global", -10.0, 10.0, 0.0, 0.5)
+    cab_dx  = st.number_input("ΔX cabecera", -5.0, 5.0, 0.0, 0.5)
+    cab_dy  = st.number_input("ΔY cabecera", -5.0, 5.0, 0.0, 0.5)
+    l_dx    = st.number_input("ΔX checks izquierda", -5.0, 5.0, 0.0, 0.5)
+    r_dx    = st.number_input("ΔX checks derecha", -5.0, 5.0, 0.0, 0.5)
+    r_dy    = st.number_input("ΔY checks derecha", -5.0, 5.0, 0.0, 0.5)
+    ia_dx   = st.number_input("ΔX instrumentos", -5.0, 5.0, 0.0, 0.5)
+    ia_dy   = st.number_input("ΔY instrumentos", -5.0, 5.0, 0.0, 0.5)
+    obs_dx  = st.number_input("ΔX observaciones", -5.0, 5.0, 0.0, 0.5)
+    obs_dy  = st.number_input("ΔY observaciones", -5.0, 5.0, 0.0, 0.5)
+    tec_dx  = st.number_input("ΔX técnico/firma", -5.0, 5.0, 0.0, 0.5)
+    tec_dy  = st.number_input("ΔY técnico/firma", -5.0, 5.0, 0.0, 0.5)
+    emp_dx  = st.number_input("ΔX empresa", -5.0, 5.0, 0.0, 0.5)
+    emp_dy  = st.number_input("ΔY empresa", -5.0, 5.0, 0.0, 0.5)
+    oi_dx   = st.number_input("ΔX obs. internas", -5.0, 5.0, 0.0, 0.5)
+    oi_dy   = st.number_input("ΔY obs. internas", -5.0, 5.0, 0.0, 0.5)
+    rc_dx   = st.number_input("ΔX recepción conf.", -5.0, 5.0, 0.0, 0.5)
+    rc_dy   = st.number_input("ΔY recepción conf.", -5.0, 5.0, 0.0, 0.5)
+
+def P(x, y, block_dx=0.0, block_dy=0.0):
+    """Aplica offsets globales + de bloque, devuelve (x,y) ajustados en mm."""
+    return x + glob_dx + block_dx, y + glob_dy + block_dy
+
+# ============================== Utilidades de firmas ==============================
 def recortar_firma(canvas_result):
-    """Recorta la firma dibujada (elimina fondo en blanco) y devuelve PNG en memoria."""
     if canvas_result.image_data is None:
         return None
     arr = canvas_result.image_data.astype(np.uint8)
@@ -94,14 +109,13 @@ def recortar_firma(canvas_result):
     if len(xs) == 0:
         return None
     x1, y1, x2, y2 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
-    crop = img.crop((x1, y1, x2, y2))
     bio = io.BytesIO()
-    crop.save(bio, format="PNG")
+    img.crop((x1, y1, x2, y2)).save(bio, format="PNG")
     bio.seek(0)
     return bio
 
-# ============= UI =============
-st.title("Pauta Mantención — PDF idéntico a la plantilla (A4 Horizontal)")
+# ================================== UI ==================================
+st.title("Pauta Mantención — PDF idéntico a plantilla (A4 horizontal)")
 
 c1, c2 = st.columns(2)
 with c1:
@@ -118,23 +132,20 @@ def block(title, items):
     outs = []
     for it in items:
         a, b = st.columns([5, 3])
-        with a:
-            st.write(it)
-        with b:
-            outs.append(st.radio(" ", ["OK", "NO", "N/A"], horizontal=True, key=f"{title}-{it}"))
+        with a: st.write(it)
+        with b: outs.append(st.radio(" ", ["OK", "NO", "N/A"], horizontal=True, key=f"{title}-{it}"))
     return outs
 
-# Ítems por bloque
 items1 = ["1.1. Carcasa Frontal y Trasera", "1.2. Estado de Software", "1.3. Panel frontal", "1.4. Batería de respaldo"]
-items2 = ["2.1. Chequeo de yugo de O2, N2O, Aire", "2.2. Revisión o reemplazo de empaquetadura de yugo", "2.3. Verificación de entrada de presión", "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"]
-items3 = [
-    "3.1. Revisión y calibración de válvula de flujómetro de N2O", "3.2. Revisión y calibración de válvula de flujometro de O2",
-    "3.3. Revisión y calibración de válvula de flujometro de Aire", "3.4. Chequeo de fugas", "3.5. Verificación de flujos",
-    "3.6. Verificación de regulador de 2da etapa", "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
-    "3.8. Revisión de sistema proporción de O2/N2O", "3.9. Revisión de manifold de vaporizadores"
-]
-items4 = ["4.1. Revisión o reemplazo de empaquetadura de canister", "4.2. Revisión de válvula APL", "4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)",
-          "4.4. Revisión de válvula inhalatoria", "4.5. Revisión de válvula exhalatoria", "4.6. Chequeo de fugas", "4.7. Hermeticidad"]
+items2 = ["2.1. Chequeo de yugo de O2, N2O, Aire", "2.2. Revisión o reemplazo de empaquetadura de yugo",
+          "2.3. Verificación de entrada de presión", "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"]
+items3 = ["3.1. Revisión y calibración de válvula de flujómetro de N2O", "3.2. Revisión y calibración de válvula de flujometro de O2",
+          "3.3. Revisión y calibración de válvula de flujometro de Aire", "3.4. Chequeo de fugas", "3.5. Verificación de flujos",
+          "3.6. Verificación de regulador de 2da etapa", "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
+          "3.8. Revisión de sistema proporción de O2/N2O", "3.9. Revisión de manifold de vaporizadores"]
+items4 = ["4.1. Revisión o reemplazo de empaquetadura de canister", "4.2. Revisión de válvula APL",
+          "4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)", "4.4. Revisión de válvula inhalatoria",
+          "4.5. Revisión de válvula exhalatoria", "4.6. Chequeo de fugas", "4.7. Hermeticidad"]
 items5 = ["5.1. Porcentaje de oxigeno", "5.2. Volumen corriente y volumen minuto", "5.3. Presión de vía aérea",
           "5.4. Frecuencia respiratoria", "5.5. Modo ventilatorio", "5.6. Alarmas",
           "5.7. Calibración de celda de oxígeno a 21% y al 100%", "5.8. Calibración de sensores de flujo"]
@@ -160,8 +171,8 @@ with cB:
     mo2 = st.text_input("MODELO (2)")
     se2 = st.text_input("NÚMERO SERIE (2)")
 
-obs    = st.text_area("Observaciones", height=90)
-op     = st.radio("¿Equipo operativo?", ["SI", "NO"], horizontal=True)
+obs = st.text_area("Observaciones", height=90)
+op  = st.radio("¿Equipo operativo?", ["SI", "NO"], horizontal=True)
 
 cT1, cT2 = st.columns([2, 1])
 with cT1:
@@ -185,7 +196,7 @@ with cR2:
     firma_cli = st_canvas(fill_color="rgba(0,0,0,0)", stroke_width=2, stroke_color="#000",
                           background_color="#fff", height=95, width=240, drawing_mode="freedraw", key="firma_cli")
 
-# ============= Construir overlay (texto/X/firmas) en la misma página que la plantilla =============
+# ======================= Construcción del overlay sobre la plantilla =======================
 def build_overlay(template_path="MAQ ANESTESIA_V2.pdf"):
     reader = PdfReader(template_path)
     page = reader.pages[0]
@@ -195,150 +206,133 @@ def build_overlay(template_path="MAQ ANESTESIA_V2.pdf"):
     c = rl_canvas.Canvas(buf, pagesize=(W, H))
 
     # Helpers
-    def draw_text_mm(txt, x, y, size=9):
+    def text_at(txt, x_mm, y_mm, size=9):
         c.setFont("Helvetica", size)
-        c.drawString(x * MM, H - y * MM, txt or "")
+        c.drawString(x_mm * MM, H - y_mm * MM, txt or "")
 
-    def draw_lines_block(text, x, y, line_h, max_lines):
+    def lines_block(text, x_mm, y_mm, line_h, max_lines):
         c.setFont("Helvetica", 9)
         for i, ln in enumerate((text or "").splitlines()[:max_lines]):
-            c.drawString(x * MM, H - (y + i * line_h) * MM, ln)
+            c.drawString(x_mm * MM, H - (y_mm + i * line_h) * MM, ln)
 
-    def put_x(center_x_mm, y_mm):
+    def x_mark(cx_mm, y_mm):
         c.setFont("Helvetica-Bold", 10)
-        c.drawCentredString(center_x_mm * MM, H - (y_mm - 3) * MM, "X")
+        c.drawCentredString(cx_mm * MM, H - (y_mm - 3) * MM, "X")
 
     # CABECERA
-    draw_text_mm(marca,  CFG_POS["cab"]["marca"]["x"],  CFG_POS["cab"]["marca"]["y"])
-    draw_text_mm(modelo, CFG_POS["cab"]["modelo"]["x"], CFG_POS["cab"]["modelo"]["y"])
-    draw_text_mm(sn,     CFG_POS["cab"]["sn"]["x"],     CFG_POS["cab"]["sn"]["y"])
-    draw_text_mm(n_inv,  CFG_POS["cab"]["ninv"]["x"],   CFG_POS["cab"]["ninv"]["y"])
-    draw_text_mm(ubic,   CFG_POS["cab"]["ubic"]["x"],   CFG_POS["cab"]["ubic"]["y"])
-    draw_text_mm(fecha.strftime("%d/%m/%Y"), CFG_POS["cab"]["fecha"]["x"], CFG_POS["cab"]["fecha"]["y"])
+    for k in ("marca", "modelo", "sn", "ninv", "ubic"):
+        x, y = BASE["cab"][k]["x"], BASE["cab"][k]["y"]
+        x, y = P(x, y, cab_dx, cab_dy)
+        val = {"marca": marca, "modelo": modelo, "sn": sn, "ninv": n_inv, "ubic": ubic}[k]
+        text_at(val, x, y)
+    x, y = P(BASE["cab"]["fecha"]["x"], BASE["cab"]["fecha"]["y"], cab_dx, cab_dy)
+    text_at(fecha.strftime("%d/%m/%Y"), x, y)
 
-    # CHECKS IZQUIERDA (1..4)
-    cl = CFG_POS["checks_left"]
-    y = cl["sec1_y"]
+    # CHECKS IZQUIERDA
+    L = BASE["checks_left"]
+    y = L["sec1_y"] + glob_dy
     for sel in res1:
-        put_x({"OK": cl["ok"], "NO": cl["no"], "N/A": cl["na"]}[sel], y)
-        y += cl["row_h"]
-
-    y = cl["sec2_y"]
+        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
+        y += L["row_h"]
+    y = L["sec2_y"] + glob_dy
     for sel in res2:
-        put_x({"OK": cl["ok"], "NO": cl["no"], "N/A": cl["na"]}[sel], y)
-        y += cl["row_h"]
-
-    y = cl["sec3_y"]
+        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
+        y += L["row_h"]
+    y = L["sec3_y"] + glob_dy
     for sel in res3:
-        put_x({"OK": cl["ok"], "NO": cl["no"], "N/A": cl["na"]}[sel], y)
-        y += cl["row_h"]
-
-    y = cl["sec4_y"]
+        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
+        y += L["row_h"]
+    y = L["sec4_y"] + glob_dy
     for sel in res4:
-        put_x({"OK": cl["ok"], "NO": cl["no"], "N/A": cl["na"]}[sel], y)
-        y += cl["row_h"]
+        x_mark({"OK": L["ok"]+l_dx+glob_dx, "NO": L["no"]+l_dx+glob_dx, "N/A": L["na"]+l_dx+glob_dx}[sel], y)
+        y += L["row_h"]
 
-    # CHECKS DERECHA (5..6)
-    cr = CFG_POS["checks_right"]
-    y = cr["sec5a_y"]
+    # CHECKS DERECHA
+    R = BASE["checks_right"]
+    y = R["sec5a_y"] + r_dy + glob_dy
     for sel in res5[:6]:
-        put_x({"OK": cr["ok"], "NO": cr["no"], "N/A": cr["na"]}[sel], y)
-        y += cr["row_h"]
-
-    y = cr["sec5b_y"]
+        x_mark({"OK": R["ok"]+r_dx+glob_dx, "NO": R["no"]+r_dx+glob_dx, "N/A": R["na"]+r_dx+glob_dx}[sel], y)
+        y += R["row_h"]
+    y = R["sec5b_y"] + r_dy + glob_dy
     for sel in res5[6:]:
-        put_x({"OK": cr["ok"], "NO": cr["no"], "N/A": cr["na"]}[sel], y)
-        y += cr["row_h"]
-
-    y = cr["sec6_y"]
+        x_mark({"OK": R["ok"]+r_dx+glob_dx, "NO": R["no"]+r_dx+glob_dx, "N/A": R["na"]+r_dx+glob_dx}[sel], y)
+        y += R["row_h"]
+    y = R["sec6_y"] + r_dy + glob_dy
     for sel in res6:
-        put_x({"OK": cr["ok"], "NO": cr["no"], "N/A": cr["na"]}[sel], y)
-        y += cr["row_h"]
+        x_mark({"OK": R["ok"]+r_dx+glob_dx, "NO": R["no"]+r_dx+glob_dx, "N/A": R["na"]+r_dx+glob_dx}[sel], y)
+        y += R["row_h"]
 
-    # 7. INSTRUMENTOS DE ANÁLISIS
-    ia = CFG_POS["ia"]
-    draw_text_mm(eq1, ia["eq1"]["x"], ia["eq1"]["y"])
-    draw_text_mm(ma1, ia["ma1"]["x"], ia["ma1"]["y"])
-    draw_text_mm(mo1, ia["mo1"]["x"], ia["mo1"]["y"])
-    draw_text_mm(se1, ia["se1"]["x"], ia["se1"]["y"])
-
-    draw_text_mm(eq2, ia["eq2"]["x"], ia["eq2"]["y"])
-    draw_text_mm(ma2, ia["ma2"]["x"], ia["ma2"]["y"])
-    draw_text_mm(mo2, ia["mo2"]["x"], ia["mo2"]["y"])
-    draw_text_mm(se2, ia["se2"]["x"], ia["se2"]["y"])
+    # 7. INSTRUMENTOS
+    for key, val in [("eq1", eq1), ("ma1", ma1), ("mo1", mo1), ("se1", se1),
+                     ("eq2", eq2), ("ma2", ma2), ("mo2", mo2), ("se2", se2)]:
+        x0, y0 = BASE["ia"][key]["x"], BASE["ia"][key]["y"]
+        x0, y0 = P(x0, y0, ia_dx, ia_dy)
+        text_at(val, x0, y0)
 
     # OBSERVACIONES
-    draw_lines_block(obs, CFG_POS["obs"]["x"], CFG_POS["obs"]["y"],
-                     CFG_POS["obs"]["line_h"], CFG_POS["obs"]["max_lines"])
+    x0, y0 = P(BASE["obs"]["x"], BASE["obs"]["y"], obs_dx, obs_dy)
+    lines_block(obs, x0, y0, BASE["obs"]["line_h"], BASE["obs"]["max_lines"])
 
     # EQUIPO OPERATIVO
-    si = "X" if op == "SI" else ""
-    no = "X" if op == "NO" else ""
-    draw_text_mm(f"SI [ {si} ]    NO [ {no} ]", CFG_POS["operativo"]["x"], CFG_POS["operativo"]["y"])
+    x0, y0 = P(BASE["operativo"]["x"], BASE["operativo"]["y"], obs_dx, obs_dy)
+    text_at(f"SI [ {'X' if op=='SI' else ' '} ]    NO [ {'X' if op=='NO' else ' '} ]", x0, y0)
 
     # TÉCNICO + FIRMA
-    draw_text_mm(tecnico, CFG_POS["tecnico"]["x"], CFG_POS["tecnico"]["y"])
+    x0, y0 = P(BASE["tecnico"]["x"], BASE["tecnico"]["y"], tec_dx, tec_dy)
+    text_at(tecnico, x0, y0)
     ftec = recortar_firma(firma_tec)
     if ftec:
-        x, yb, w, h = (CFG_POS["firma_tec_box"][k] for k in ("x", "y", "w", "h"))
+        bx, by = P(BASE["firma_tec_box"]["x"], BASE["firma_tec_box"]["y"], tec_dx, tec_dy)
+        bw, bh = BASE["firma_tec_box"]["w"], BASE["firma_tec_box"]["h"]
         img = Image.open(ftec); iw, ih = img.size
-        scale = min((w*MM)/iw, (h*MM)/ih); dw, dh = iw*scale, ih*scale
-        x_pt = x*MM + (w*MM - dw)/2
-        y_pt = H - yb*MM - h*MM + (h*MM - dh)/2
+        s = min((bw*MM)/iw, (bh*MM)/ih)
+        dw, dh = iw*s, ih*s
+        x_pt = bx*MM + (bw*MM - dw)/2
+        y_pt = H - by*MM - bh*MM + (bh*MM - dh)/2
         c.drawImage(ImageReader(ftec), x_pt, y_pt, width=dw, height=dh, mask='auto')
 
     # EMPRESA
-    draw_text_mm(empresa, CFG_POS["empresa"]["x"], CFG_POS["empresa"]["y"])
+    x0, y0 = P(BASE["empresa"]["x"], BASE["empresa"]["y"], emp_dx, emp_dy)
+    text_at(empresa, x0, y0)
 
-    # OBS. (USO INTERNO)
-    draw_lines_block(obs_int, CFG_POS["obs_int"]["x"], CFG_POS["obs_int"]["y"],
-                     CFG_POS["obs_int"]["line_h"], CFG_POS["obs_int"]["max_lines"])
+    # OBS. USO INTERNO
+    x0, y0 = P(BASE["obs_int"]["x"], BASE["obs_int"]["y"], oi_dx, oi_dy)
+    lines_block(obs_int, x0, y0, BASE["obs_int"]["line_h"], BASE["obs_int"]["max_lines"])
 
     # RECEPCIÓN CONFORME (FIRMAS)
-    fing = recortar_firma(firma_ing)
-    fcli = recortar_firma(firma_cli)
-    if fing:
-        x, yb, w, h = (CFG_POS["rc_ing"][k] for k in ("x", "y", "w", "h"))
-        img = Image.open(fing); iw, ih = img.size
-        scale = min((w*MM)/iw, (h*MM)/ih); dw, dh = iw*scale, ih*scale
-        x_pt = x*MM + (w*MM - dw)/2
-        y_pt = H - yb*MM - h*MM + (h*MM - dh)/2
-        c.drawImage(ImageReader(fing), x_pt, y_pt, width=dw, height=dh, mask='auto')
-    if fcli:
-        x, yb, w, h = (CFG_POS["rc_cli"][k] for k in ("x", "y", "w", "h"))
-        img = Image.open(fcli); iw, ih = img.size
-        scale = min((w*MM)/iw, (h*MM)/ih); dw, dh = iw*scale, ih*scale
-        x_pt = x*MM + (w*MM - dw)/2
-        y_pt = H - yb*MM - h*MM + (h*MM - dh)/2
-        c.drawImage(ImageReader(fcli), x_pt, y_pt, width=dw, height=dh, mask='auto')
+    for key, firma, dx, dy in [("rc_ing", firma_ing, rc_dx, rc_dy), ("rc_cli", firma_cli, rc_dx, rc_dy)]:
+        fpng = recortar_firma(firma)
+        if not fpng: continue
+        bx, by = P(BASE[key]["x"], BASE[key]["y"], dx, dy)
+        bw, bh = BASE[key]["w"], BASE[key]["h"]
+        img = Image.open(fpng); iw, ih = img.size
+        s = min((bw*MM)/iw, (bh*MM)/ih)
+        dw, dh = iw*s, ih*s
+        x_pt = bx*MM + (bw*MM - dw)/2
+        y_pt = H - by*MM - bh*MM + (bh*MM - dh)/2
+        c.drawImage(ImageReader(fpng), x_pt, y_pt, width=dw, height=dh, mask='auto')
 
     c.showPage(); c.save(); buf.seek(0)
     return buf
 
-# Fusiona overlay con plantilla
+# ====================== Fusión overlay + plantilla y descarga ======================
 def merge_with_template(overlay_bytes, template_path="MAQ ANESTESIA_V2.pdf"):
     base_reader = PdfReader(template_path)
     base_page = base_reader.pages[0]
     ov_reader = PdfReader(overlay_bytes)
     ov_page = ov_reader.pages[0]
-
-    merged = PageObject.create_blank_page(width=base_page.mediabox.width,
-                                          height=base_page.mediabox.height)
+    merged = PageObject.create_blank_page(width=base_page.mediabox.width, height=base_page.mediabox.height)
     merged.merge_page(base_page)
     merged.merge_page(ov_page)
-
-    writer = PdfWriter()
-    writer.add_page(merged)
-    out = io.BytesIO()
-    writer.write(out); out.seek(0)
+    writer = PdfWriter(); writer.add_page(merged)
+    out = io.BytesIO(); writer.write(out); out.seek(0)
     return out
 
-# ============= Botón: generar y descargar =============
-if st.button("Generar PDF (idéntico a plantilla, Horizontal)"):
+if st.button("Generar PDF (igual a plantilla, Horizontal)"):
     overlay = build_overlay("MAQ ANESTESIA_V2.pdf")
     final_pdf = merge_with_template(overlay, "MAQ ANESTESIA_V2.pdf")
     st.download_button(
-        "Descargar PDF (V2 — igual a plantilla)",
+        "Descargar PDF (V2 — 1:1)",
         data=final_pdf.getvalue(),
         file_name=f"MP_Anestesia_V2_{(sn or 'sin_serie')}.pdf",
         mime="application/pdf"
