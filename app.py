@@ -7,45 +7,7 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# ===== Márgenes y layout base =====
-PAGE_LM = 5   # margen izquierdo (mm)
-PAGE_TM = 4   # margen superior (mm)
-PAGE_RM = 5   # margen derecho (mm)
-
-# ===== Parámetros de la tabla izquierda (usados también para el ancho del encabezado) =====
-TABLE_ITEM_W = 85      # ancho de la columna de texto (ítem)
-TABLE_COL_W  = 10      # ancho de cada columna OK/NO/N/A
-TABLE_TOTAL_W = TABLE_ITEM_W + 3 * TABLE_COL_W  # 85 + 10 + 10 + 10 = 115
-
-# Primera columna con margen reducido
-FIRST_COL_LEFT = 12    # antes 22, margen más pequeño
-FIRST_TAB_RIGHT = FIRST_COL_LEFT + TABLE_TOTAL_W  # borde derecho de la 1ª tabla
-
-# Separación entre columnas reducida
-COL_GAP = 6  # antes ~23 mm (160-137); ahora 6 mm
-SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP  # inicio de la segunda columna
-
-def create_checkbox_table(pdf, section_title, items, x_pos):
-    pdf.set_x(x_pos)
-    pdf.set_font("Arial", "B", 7)
-    pdf.cell(0, 4, section_title, ln=True, border=0)
-    
-    pdf.set_x(x_pos)
-    pdf.set_font("Arial", "", 6)
-    pdf.cell(TABLE_ITEM_W, 3.5, "", 0)
-    pdf.cell(TABLE_COL_W, 3.5, "OK", 1, 0, "C")
-    pdf.cell(TABLE_COL_W, 3.5, "NO", 1, 0, "C")
-    pdf.cell(TABLE_COL_W, 3.5, "N/A", 1, 1, "C")
-    
-    pdf.set_font("Arial", "", 6)
-    for item, value in items:
-        pdf.set_x(x_pos)
-        pdf.cell(TABLE_ITEM_W, 3.5, item, 1, 0)
-        pdf.cell(TABLE_COL_W, 3.5, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(TABLE_COL_W, 3.5, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(TABLE_COL_W, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
-    pdf.ln(2)
-
+# ========= utilidades =========
 def _crop_signature(canvas_result):
     if canvas_result.image_data is None:
         return None
@@ -109,9 +71,8 @@ def add_signature_in_box(pdf_obj, canvas_result, x, y, w_mm=40, h_mm=12, draw_bo
     except Exception as e:
         st.error(f"Error al añadir imagen (inline): {e}")
 
-def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5):
+def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5, label_w=32):
     pdf.set_font("Arial", "", 7)
-    label_w = 32
     pdf.set_xy(x, y)
     pdf.cell(label_w, size, "Equipo Operativo:", 0, 0)
     x_box_si = x + label_w + 2
@@ -127,8 +88,32 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5):
     pdf.set_xy(x_box_no + size + text_gap, y)
     pdf.cell(6, size, "NO", 0, 1)
 
+# tabla checklists con anchos dinámicos y filas más altas para “alargar” verticalmente
+def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=4.0):
+    pdf.set_x(x_pos)
+    pdf.set_font("Arial", "B", 7)
+    pdf.cell(0, row_h + 0.0, section_title, ln=True, border=0)
+    
+    pdf.set_x(x_pos)
+    pdf.set_font("Arial", "", 6)
+    pdf.cell(item_w, row_h, "", 0)
+    pdf.cell(col_w, row_h, "OK", 1, 0, "C")
+    pdf.cell(col_w, row_h, "NO", 1, 0, "C")
+    pdf.cell(col_w, row_h, "N/A", 1, 1, "C")
+    
+    pdf.set_font("Arial", "", 6)
+    for item, value in items:
+        pdf.set_x(x_pos)
+        pdf.cell(item_w, row_h, item, 1, 0)
+        pdf.cell(col_w, row_h, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(col_w, row_h, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(col_w, row_h, "X" if value == "N/A" else "", 1, 1, "C")
+    pdf.ln(2)
+
+# ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
+
     marca = st.text_input("Marca")
     modelo = st.text_input("Modelo")
     sn = st.text_input("Número de Serie")
@@ -201,7 +186,7 @@ def main():
         st.session_state.analisis_equipos = [{}]
     def add_equipo():
         st.session_state.analisis_equipos.append({})
-    for i, equipo_data in enumerate(st.session_state.analisis_equipos):
+    for i, _ in enumerate(st.session_state.analisis_equipos):
         st.markdown(f"**Equipo {i+1}**")
         col_eq, col_btn = st.columns([0.9, 0.1])
         with col_eq:
@@ -227,27 +212,55 @@ def main():
     col_tecnico, col_ingenieria, col_clinico = st.columns(3)
     with col_tecnico:
         st.write("Técnico Encargado:")
-        canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_tecnico")
+        canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+                                          background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
+                                          key="canvas_tecnico")
     with col_ingenieria:
         st.write("Ingeniería Clínica:")
-        canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_ingenieria")
+        canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+                                             background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
+                                             key="canvas_ingenieria")
     with col_clinico:
         st.write("Personal Clínico:")
-        canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000", background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw", key="canvas_clinico")
+        canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=2, stroke_color="#000000",
+                                          background_color="#EEEEEE", height=150, width=300, drawing_mode="freedraw",
+                                          key="canvas_clinico")
 
     if st.button("Generar PDF"):
+        # ======= página y márgenes MUY pequeños para ocupar toda la hoja =======
+        PAGE_LM = 3   # mm
+        PAGE_TM = 3   # mm
+        PAGE_RM = 3   # mm
+
         pdf = FPDF('L', 'mm', 'A4')
-        pdf.set_margins(PAGE_LM, PAGE_TM, PAGE_RM)  # márgenes más pequeños
+        pdf.set_margins(PAGE_LM, PAGE_TM, PAGE_RM)
         pdf.set_auto_page_break(True, margin=PAGE_TM + 2)
         pdf.add_page()
 
-        # ======= ENCABEZADO =======
+        page_w = pdf.w
+        page_h = pdf.h
+
+        # ======= cálculo de columnas para USAR TODO EL ANCHO =======
+        # Dejamos un pequeño margen interno para no tocar la orilla con el texto de la columna izquierda (por el logo)
+        FIRST_COL_LEFT = 12  # mm desde el borde izquierdo
+        COL_GAP = 6          # separación mínima entre columnas
+
+        printable_w = page_w - FIRST_COL_LEFT - PAGE_RM
+        col_total_w = (printable_w - COL_GAP) / 2.0  # cada tabla ocupa media página útil
+
+        # Anchos de celdas de checklist
+        COL_W = 12.0                               # ancho de cada columna OK/NO/N/A (más ancho que antes)
+        ITEM_W = max(60.0, col_total_w - 3 * COL_W)  # ítem ocupa el resto; mínimo de seguridad
+
+        FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w  # borde derecho de la 1ª tabla
+        SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP     # inicio de la 2ª columna
+
+        # ======= ENCABEZADO (logo + franja gris que termina al borde de la 1ª tabla) =======
         logo_x, logo_y = 2, 2
         desired_logo_w = 58
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
-        # Altura real del logo
         try:
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
@@ -255,117 +268,126 @@ def main():
         except Exception:
             logo_h = desired_logo_w * 0.8
 
-        # Dibuja el logo
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=desired_logo_w)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Fila gris: letra pequeña, ALARGADA hasta la ÚLTIMA COLUMNA de la primera tabla (FIRST_TAB_RIGHT)
-        pdf.set_font("Arial", "B", 7)
+        pdf.set_font("Arial", "B", 7)   # letra más pequeña
         title_h = 6
         title_x = logo_x + desired_logo_w + sep
         top_offset = 18
         title_y = max(logo_y + 2, top_offset)
-        cell_w = max(10, FIRST_TAB_RIGHT - title_x)  # termina EXACTO en la última columna de la 1ª tabla
+        # La franja gris termina EXACTO en el borde derecho de la 1ª tabla
+        cell_w = max(10, FIRST_TAB_RIGHT - title_x)
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
-        # Fondo del encabezado y base de contenido
         header_bottom = max(logo_y + logo_h, title_y + title_h)
         content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
-        # ======= COLUMNA IZQUIERDA (margen reducido) =======
+        # ======= COLUMNA IZQUIERDA (ocupa media página) =======
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7)
-        pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
+        pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(0, 3.5, f"Modelo: {modelo}", 0, 1)
+        pdf.cell(0, 4, f"Modelo: {modelo}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(0, 3.5, f"Número de Serie: {sn}", 0, 1)
+        pdf.cell(0, 4, f"Número de Serie: {sn}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(0, 3.5, f"Número de Inventario: {inventario}", 0, 1)
+        pdf.cell(0, 4, f"Número de Inventario: {inventario}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(0, 3.5, f"Ubicación: {ubicacion}", 0, 1)
+        pdf.cell(0, 4, f"Ubicación: {ubicacion}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
-        pdf.ln(2)
+        pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
+        pdf.ln(1)
 
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=FIRST_COL_LEFT)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT)
+        # Tablas de la primera columna (anchas y filas más altas)
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=FIRST_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0)
 
-        # ======= COLUMNA DERECHA (separación reducida) =======
-        y_column_start_right = content_y_base  # alineado con Marca/Modelo (puedes moverlo si quieres)
-        pdf.set_y(y_column_start_right)
+        # ======= COLUMNA DERECHA (arranca a la misma altura y ocupa media página) =======
+        pdf.set_y(content_y_base)
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=SECOND_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0)
+        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=SECOND_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=4.0)
 
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=SECOND_COL_LEFT)
-        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=SECOND_COL_LEFT)
-
-        # ---------- Instrumentos de análisis ----------
+        # ---------- Instrumentos de análisis (ancho = toda la 2ª columna) ----------
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
 
+        # Repartimos el ancho total de la columna derecha
+        col_right_total = col_total_w
+        eq_w = round(col_right_total * 0.34, 2)
+        other_w = round((col_right_total - eq_w) / 3.0, 2)
+
         if st.session_state.analisis_equipos and any(
-            equipo.get('equipo') or equipo.get('marca') or equipo.get('modelo') or equipo.get('serie')
-            for equipo in st.session_state.analisis_equipos
+            e.get('equipo') or e.get('marca') or e.get('modelo') or e.get('serie')
+            for e in st.session_state.analisis_equipos
         ):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 6)
             pdf.set_x(SECOND_COL_LEFT)
-            pdf.cell(34, 3.5, "Equipo", 1, 0, "C", 1)
-            pdf.cell(27, 3.5, "Marca", 1, 0, "C", 1)
-            pdf.cell(27, 3.5, "Modelo", 1, 0, "C", 1)
-            pdf.cell(27, 3.5, "N° Serie", 1, 1, "C", 1)
+            pdf.cell(eq_w, 4, "Equipo", 1, 0, "C", 1)
+            pdf.cell(other_w, 4, "Marca", 1, 0, "C", 1)
+            pdf.cell(other_w, 4, "Modelo", 1, 0, "C", 1)
+            pdf.cell(other_w, 4, "N° Serie", 1, 1, "C", 1)
+
             pdf.set_font("Arial", "", 6)
-            for equipo_data in st.session_state.analisis_equipos:
-                equipo = equipo_data.get('equipo', '')
-                marca_equipo = equipo_data.get('marca', '')
-                modelo_equipo = equipo_data.get('modelo', '')
-                serie_equipo = equipo_data.get('serie', '')
+            for e in st.session_state.analisis_equipos:
+                equipo = e.get('equipo', '')
+                marca_equipo = e.get('marca', '')
+                modelo_equipo = e.get('modelo', '')
+                serie_equipo = e.get('serie', '')
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
                     pdf.set_x(SECOND_COL_LEFT)
-                    pdf.cell(34, 3.5, equipo, 1, 0, "L")
-                    pdf.cell(27, 3.5, marca_equipo, 1, 0, "L")
-                    pdf.cell(27, 3.5, modelo_equipo, 1, 0, "L")
-                    pdf.cell(27, 3.5, serie_equipo, 1, 1, "L")
+                    pdf.cell(eq_w, 4, equipo, 1, 0, "L")
+                    pdf.cell(other_w, 4, marca_equipo, 1, 0, "L")
+                    pdf.cell(other_w, 4, modelo_equipo, 1, 0, "L")
+                    pdf.cell(other_w, 4, serie_equipo, 1, 1, "L")
         pdf.ln(2)
 
-        # ---------- Observaciones / Técnico ----------
+        # ---------- Observaciones / Técnico (anchos al máximo de la 2ª columna) ----------
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "B", 7)
-        pdf.cell(0, 3.5, "Observaciones:", ln=True)
+        pdf.cell(0, 4, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 7)
         pdf.set_x(SECOND_COL_LEFT)
-        pdf.multi_cell(115, 3.5, f"{observaciones}")
+        pdf.multi_cell(col_total_w, 4, f"{observaciones}")
         pdf.ln(1)
         
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "B", 7)
-        pdf.cell(0, 3.5, "Observaciones (uso interno):", ln=True)
+        pdf.cell(0, 4, "Observaciones (uso interno):", ln=True)
         pdf.set_font("Arial", "", 7)
         pdf.set_x(SECOND_COL_LEFT)
-        pdf.multi_cell(115, 3.5, f"{observaciones_interno}")
+        pdf.multi_cell(col_total_w, 4, f"{observaciones_interno}")
         pdf.ln(1)
 
-        # Equipo Operativo con casillas SI/NO
+        # Equipo Operativo con casillas SI/NO (alineado a 2ª columna)
         y_equipo_op = pdf.get_y()
-        draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4)
+        draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4, label_w=38)
         pdf.ln(2)
 
-        # Nombre Técnico/Ingeniero con firma a la derecha
+        # Nombre Técnico/Ingeniero con firma a la derecha (dentro de la 2ª columna)
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 7)
         y_nombre = pdf.get_y()
-        name_box_w = 70
+        name_box_w = min(80, col_total_w * 0.55)
         pdf.cell(name_box_w, 5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 0, "L")
-        sig_w, sig_h = 40, 12
+        sig_w, sig_h = min(50, col_total_w * 0.35), 12
         x_sig = SECOND_COL_LEFT + name_box_w + 5
         y_sig = y_nombre
         add_signature_in_box(pdf, canvas_result_tecnico, x=x_sig, y=y_sig, w_mm=sig_w, h_mm=sig_h, draw_border=True)
@@ -373,12 +395,12 @@ def main():
 
         # Empresa
         pdf.set_x(SECOND_COL_LEFT)
-        pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
+        pdf.cell(0, 4, f"Empresa Responsable: {empresa}", 0, 1)
         
-        # ---------- FIRMAS finales (2) ----------
+        # ---------- FIRMAS finales (2) dentro del ancho de la 2ª columna ----------
         pdf.ln(5) 
-        ancho_area = 117  # área conceptual de la columna derecha
-        ancho_caja = 50
+        ancho_area = col_total_w
+        ancho_caja = min(60, ancho_area * 0.42)
         x_izq = SECOND_COL_LEFT + (ancho_area/4) - (ancho_caja/2)
         x_der = SECOND_COL_LEFT + (3*ancho_area/4) - (ancho_caja/2)
         y_firma_start = pdf.get_y()
