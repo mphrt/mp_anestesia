@@ -114,6 +114,26 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     pdf.rect(x, y_body, w, content_h)
     pdf.set_y(y_body + content_h)
 
+# --- NUEVO: línea partida con texto centrado ---
+def split_line_with_center_text(pdf, x_left, y, total_w, text, fs=7.5, pad=2.0):
+    """Dibuja una línea horizontal 'partida' dejando un gap central para el texto."""
+    pdf.set_font("Arial", "B", fs)
+    txt_w = pdf.get_string_width(text)
+    gap_w = min(total_w - 6, txt_w + 2*pad)  # deja margen lateral al texto
+    left_end = x_left + (total_w - gap_w) / 2.0
+    right_start = left_end + gap_w
+
+    # segmentos de línea
+    pdf.set_draw_color(0, 0, 0)
+    pdf.line(x_left, y, left_end, y)
+    pdf.line(right_start, y, x_left + total_w, y)
+
+    # texto centrado dentro del gap
+    x_text = x_left + (total_w - txt_w) / 2.0
+    y_text = y - fs * 0.65  # coloca el texto "dentro" del gap
+    pdf.set_xy(x_text, y_text)
+    pdf.cell(txt_w, fs, text, 0, 0, 'C')
+
 # ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -341,7 +361,6 @@ def main():
         vm_izq = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
-        # Cabecera 5
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.2)
@@ -351,7 +370,6 @@ def main():
         pdf.cell(COL_W, LEFT_ROW_H, "OK",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "NO",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "N/A", border=1, ln=1, align="C", fill=True)
-        # Leyenda 5.x
         pdf.set_font("Arial", "", 6.2)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)
@@ -448,34 +466,30 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción (centradas EXACTO sobre el texto) ----------
-        # Centro de cada bloque (cuartos de la 2ª columna)
+        # ---------- Firmas de recepción: línea PARTIDA con texto al centro ----------
         ancho_area = col_total_w
         center_left  = SECOND_COL_LEFT + (ancho_area * 0.50)
         center_right = SECOND_COL_LEFT + (ancho_area * 1)
 
-        # Dimensión deseada de la firma
         sig_recep_w = 65
         sig_recep_h = 20
 
-        # Calcular ancho “ancla” según el texto en negrita (para centrar todo igual)
+        # calcular anchos de "ancla" (bloque) con margen
         pdf.set_font("Arial", "B", 7.5)
-        w_top     = pdf.get_string_width("RECEPCIÓN CONFORME")
-        w_bottom1 = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
-        w_bottom2 = pdf.get_string_width("PERSONAL CLÍNICO")
-        pad = 10  # margen
-        anchor_w_left  = max(sig_recep_w, w_top, w_bottom1) + pad
-        anchor_w_right = max(sig_recep_w, w_top, w_bottom2) + pad
+        w_rc = pdf.get_string_width("RECEPCIÓN CONFORME")
+        w_pi = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
+        w_pc = pdf.get_string_width("PERSONAL CLÍNICO")
+        pad_block = 10
+        block_w_left  = max(sig_recep_w, w_rc, w_pi) + pad_block
+        block_w_right = max(sig_recep_w, w_rc, w_pc) + pad_block
 
-        # Coordenadas de cada ancla
-        x_anchor_left  = center_left  - anchor_w_left/2.0
-        x_anchor_right = center_right - anchor_w_right/2.0
+        x_block_left  = center_left  - block_w_left/2.0
+        x_block_right = center_right - block_w_right/2.0
 
-        # Posiciones verticales
-        y_anchor_top = pdf.get_y()
-        y_sig = y_anchor_top + 2.0  # imagen un poco por encima de la línea
+        y_top = pdf.get_y()
+        y_sig = y_top + 2.0
 
-        # Dibujar firmas centradas en el mismo eje que el texto
+        # Firmas centradas
         add_signature_inline(pdf, canvas_result_ingenieria,
                              x=center_left - sig_recep_w/2.0, y=y_sig,
                              w_mm=sig_recep_w, h_mm=sig_recep_h)
@@ -483,25 +497,23 @@ def main():
                              x=center_right - sig_recep_w/2.0, y=y_sig,
                              w_mm=sig_recep_w, h_mm=sig_recep_h)
 
-        # Línea bajo las firmas (longitud = ancho del ancla)
+        # Línea (partida) + texto “RECEPCIÓN CONFORME” en el centro
         y_line = y_sig + sig_recep_h + 3.0
-        pdf.set_draw_color(0, 0, 0)
-        pdf.line(x_anchor_left,  y_line, x_anchor_left  + anchor_w_left,  y_line)
-        pdf.line(x_anchor_right, y_line, x_anchor_right + anchor_w_right, y_line)
+        split_line_with_center_text(pdf, x_block_left,  y_line, block_w_left,  "RECEPCIÓN CONFORME", fs=7.5, pad=2.0)
+        split_line_with_center_text(pdf, x_block_right, y_line, block_w_right, "RECEPCIÓN CONFORME", fs=7.5, pad=2.0)
 
-        # Textos centrados sobre el MISMO ancho ancla
+        # Segunda línea (debajo) continua + textos inferiores
+        y_line2 = y_line + 1.8
+        pdf.line(x_block_left,  y_line2, x_block_left  + block_w_left,  y_line2)
+        pdf.line(x_block_right, y_line2, x_block_right + block_w_right, y_line2)
+
         pdf.set_font("Arial", "B", 7.5)
-        pdf.set_xy(x_anchor_left, y_line + 0.6)
-        pdf.cell(anchor_w_left, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
-        pdf.set_xy(x_anchor_left, pdf.get_y())
-        pdf.cell(anchor_w_left, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_xy(x_block_left,  y_line2 + 0.8)
+        pdf.cell(block_w_left, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_xy(x_block_right, y_line2 + 0.8)
+        pdf.cell(block_w_right, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
 
-        pdf.set_xy(x_anchor_right, y_line + 0.6)
-        pdf.cell(anchor_w_right, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
-        pdf.set_xy(x_anchor_right, pdf.get_y())
-        pdf.cell(anchor_w_right, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
-
-        pdf.set_y(max(y_line + 9, pdf.get_y()))
+        pdf.set_y(max(y_line2 + 7, pdf.get_y()))
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(),
