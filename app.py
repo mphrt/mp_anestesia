@@ -29,10 +29,7 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=45, h_mm=12):
-    """
-    Dibuja la firma SIN rectángulo, ajustada dentro de (w_mm x h_mm),
-    alineada a (x, y).
-    """
+    """Firma SIN rectángulo, ajustada dentro de (w_mm x h_mm), alineada a (x, y)."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -41,13 +38,11 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=45, h_mm=12):
         tmp_path = tmp_file.name
     try:
         img = Image.open(tmp_path)
-        # Escalar manteniendo proporción
         img_w = w_mm
         img_h = (img.height / img.width) * img_w
         if img_h > h_mm:
             img_h = h_mm
             img_w = (img.width / img.height) * img_h
-        # Dibujar (arriba-izquierda) sin borde
         pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
     except Exception as e:
         st.error(f"Error al añadir imagen (inline sin borde): {e}")
@@ -140,6 +135,15 @@ def main():
         "3.8. Revisión de sistema proporción de O2/N2O",
         "3.9. Revisión de manifold de vaporizadores"
     ])
+    sistema_absorbedor = checklist("4. Sistema absorbedor", [
+        "4.1. Revisión o reemplazo de empaquetadura de canister",
+        "4.2. Revisión de válvula APL",
+        "4.3. Verificación de manómetro de presión de vía aérea",
+        "4.4. Revisión de válvula inhalatoria",
+        "4.5. Revisión de válvula exhalatoria",
+        "4.6. Chequeo de fugas",
+        "4.7. Hermeticidad"
+    ])
     ventilador_mecanico = checklist("5. Ventilador mecánico", [
         "5.1. Porcentaje de oxígeno",
         "5.2. Volumen corriente y volumen minuto",
@@ -203,7 +207,7 @@ def main():
 
     if st.button("Generar PDF"):
         # ======= márgenes más anchos =======
-        SIDE_MARGIN = 9   # ← más ancho a izquierda/derecha
+        SIDE_MARGIN = 9   # izquierda/derecha
         TOP_MARGIN  = 4
 
         pdf = FPDF('L', 'mm', 'A4')
@@ -272,12 +276,9 @@ def main():
         pdf.cell(0, line_h, f"Ubicación: {ubicacion}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, line_h, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
-
-        # separación extra entre FECHA y el primer título
-        pdf.ln(3.0)
+        pdf.ln(3.0)  # separación extra con la 1ª tabla
 
         LEFT_ROW_H = 3.1
-        # 1 a 4 completos en la primera columna
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT,
@@ -287,26 +288,27 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
 
-        # Punto 5 en dos partes:
-        #  - En la 1ª columna: 5.1 a 5.6
-        vm_izq = [(it, val) for it, val in ventilador_mecanico if it.startswith("5.1.") or it.startswith("5.2.") or
-                  it.startswith("5.3.") or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
+        # 5 en dos partes: 5.1–5.6 en la 1ª columna
+        vm_izq = [(it, val) for it, val in ventilador_mecanico
+                  if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
+                  or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
         create_checkbox_table(pdf, "5. Ventilador mecánico", vm_izq, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, head_fs=6.5, cell_fs=5.5, indent_w=3.0)
 
-        pdf.ln(2.5)  # espacio inferior en la 1ª columna
+        pdf.ln(2.5)
 
         # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
         pdf.set_x(SECOND_COL_LEFT)
 
-        # Texto previo al 5.7
+        # Texto antes del 5.7
         pdf.set_font("Arial", "", 6.5)
         pdf.multi_cell(col_total_w, 3.5, "Verifique que el equipo realiza las siguientes acciones:", border=0)
         pdf.ln(0.5)
 
-        #  - En la 2ª columna: 5.7 y 5.8 (continuación)
-        vm_der = [(it, val) for it, val in ventilador_mecanico if it.startswith("5.7.") or it.startswith("5.8.")]
+        # 5.7–5.8 en la 2ª columna (continuación)
+        vm_der = [(it, val) for it, val in ventilador_mecanico
+                  if it.startswith("5.7.") or it.startswith("5.8.")]
         if vm_der:
             create_checkbox_table(pdf, "5. Ventilador mecánico (continuación)", vm_der, x_pos=SECOND_COL_LEFT,
                                   item_w=ITEM_W, col_w=COL_W, row_h=4.0, head_fs=7, cell_fs=6, indent_w=3.0)
@@ -372,17 +374,15 @@ def main():
         draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4, label_w=38)
         pdf.ln(2)
 
-        # Nombre Técnico/Ingeniero  +  (espacio)  +  Firma:  + firma SIN rectángulo en la misma línea
+        # Nombre Técnico/Ingeniero  +  Firma:  + firma SIN rectángulo en la misma línea
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 7)
         y_nombre = pdf.get_y()
 
         name_text = f"Nombre Técnico/Ingeniero: {tecnico}"
-        # ancho para el nombre
         name_box_w = min(90, col_total_w * 0.58)
         pdf.cell(name_box_w, 5, name_text, 0, 0, "L")
 
-        # etiqueta "Firma:" y firma inline sin recuadro
         firma_label_w = 12
         pdf.cell(firma_label_w, 5, "Firma:", 0, 0, "L")
 
@@ -390,7 +390,6 @@ def main():
         sig_w, sig_h = min(50, col_total_w * 0.35), 12
         add_signature_inline(pdf, canvas_result_tecnico, x=x_sig, y=y_nombre, w_mm=sig_w, h_mm=sig_h)
 
-        # bajar debajo de la firma
         pdf.set_y(y_nombre + sig_h + 2)
 
         # Empresa
@@ -405,9 +404,6 @@ def main():
         x_der = SECOND_COL_LEFT + (3*ancho_area/4) - (ancho_caja/2)
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
-
-        # Firmas de recepción (mantenemos sin cambiar)
-        # Usamos la versión inline sin borde para consistencia visual (o puedes dejar tu variante anterior con borde si prefieres)
         add_signature_inline(pdf, canvas_result_ingenieria, x=x_izq, y=y_firma_image, w_mm=45, h_mm=12)
         add_signature_inline(pdf, canvas_result_clinico,     x=x_der, y=y_firma_image, w_mm=45, h_mm=12)
 
