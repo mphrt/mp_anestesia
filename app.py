@@ -62,6 +62,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
+    # Cabecera gris con bordes en OK/NO/N/A
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -72,6 +73,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
+    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -341,6 +343,7 @@ def main():
         vm_izq = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
+        # Cabecera 5
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.2)
@@ -350,6 +353,7 @@ def main():
         pdf.cell(COL_W, LEFT_ROW_H, "OK",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "NO",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "N/A", border=1, ln=1, align="C", fill=True)
+        # Leyenda 5.x
         pdf.set_font("Arial", "", 6.2)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)
@@ -446,45 +450,59 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción: dos líneas iguales, centradas en la 2ª columna ----------
+        # ---------- Firmas de recepción: líneas y textos NO se mueven; solo imagen con offsets ----------
         ancho_area = col_total_w
-        # Centros de cada bloque (mitades de la segunda columna)
-        center_left  = SECOND_COL_LEFT + (ancho_area * 0.45)
-        center_right = SECOND_COL_LEFT + (ancho_area * 1)
 
-        # Longitud de línea igual para ambas
+        # Centros de cada bloque dentro de la 2ª columna (izq y der)
+        center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
+        center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
+
         pdf.set_font("Arial", "B", 7.5)
         w_rc = pdf.get_string_width("RECEPCIÓN CONFORME")
         w_pi = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
         w_pc = pdf.get_string_width("PERSONAL CLÍNICO")
-        text_block_w = max(w_rc, w_pi, w_pc) + 12  # padding
+        text_block_w = max(w_rc, w_pi, w_pc) + 12
         half_w = ancho_area / 2.0
-        max_line_len = half_w - 8  # colchón a los bordes internos
-        line_len = min(max(text_block_w, 65), max_line_len)  # >= firmas y = para ambas
+        max_line_len = half_w - 8
+        line_len = min(max(text_block_w, 65), max_line_len)
 
-        # Firmas (encima de la línea), ajustadas a la longitud disponible
+        # Tamaño de las imágenes de firma
         sig_w = min(65, line_len - 6)
         sig_h = 20
 
+        # ==== AJUSTES MANUALES DE POSICIÓN DE LAS IMÁGENES (en mm) ====
+        # Valores positivos X -> derecha, negativos X -> izquierda
+        # Valores positivos Y -> abajo,   negativos Y -> arriba
+        SIG_OFF_X_LEFT  = 0
+        SIG_OFF_Y_LEFT  = 0
+        SIG_OFF_X_RIGHT = 0
+        SIG_OFF_Y_RIGHT = 0
+        # ===============================================================
+
         y_top = pdf.get_y()
-        y_sig = y_top + 2.0
+        y_sig = y_top + 2.0  # base vertical (no movemos líneas/textos)
 
-        # Izquierda
-        x_line_left = center_left - line_len/2.0
+        # Coordenadas exactas de las líneas (NO modificar si te gustan donde están)
+        x_line_left  = center_left  - line_len / 2.0
+        x_line_right = center_right - line_len / 2.0
+
+        # Imágenes de firma: SOLO se aplican los offsets manuales
         add_signature_inline(pdf, canvas_result_ingenieria,
-                             x=center_left - sig_w/2.0, y=y_sig, w_mm=sig_w, h_mm=sig_h)
-        # Derecha
-        x_line_right = center_right - line_len/2.0
+                             x=center_left - sig_w/2.0 + SIG_OFF_X_LEFT,
+                             y=y_sig + SIG_OFF_Y_LEFT,
+                             w_mm=sig_w, h_mm=sig_h)
         add_signature_inline(pdf, canvas_result_clinico,
-                             x=center_right - sig_w/2.0, y=y_sig, w_mm=sig_w, h_mm=sig_h)
+                             x=center_right - sig_w/2.0 + SIG_OFF_X_RIGHT,
+                             y=y_sig + SIG_OFF_Y_RIGHT,
+                             w_mm=sig_w, h_mm=sig_h)
 
-        # Dibujar líneas iguales
+        # Líneas (igual que estaban)
         y_line = y_sig + sig_h + 3.0
         pdf.set_draw_color(0, 0, 0)
         pdf.line(x_line_left,  y_line, x_line_left  + line_len, y_line)
         pdf.line(x_line_right, y_line, x_line_right + line_len, y_line)
 
-        # Textos centrados bajo cada línea
+        # Textos (centrados bajo su línea)
         pdf.set_xy(x_line_left,  y_line + 0.8)
         pdf.cell(line_len, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'C')
         pdf.set_xy(x_line_left,  pdf.get_y())
