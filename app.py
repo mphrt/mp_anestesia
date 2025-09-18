@@ -446,52 +446,54 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción: línea continua + texto en dos líneas debajo ----------
+        # ---------- Firmas de recepción: dos líneas iguales, centradas en la 2ª columna ----------
         ancho_area = col_total_w
-        center_left  = SECOND_COL_LEFT + (ancho_area * 0.50)
-        center_right = SECOND_COL_LEFT + (ancho_area * 1)
+        # Centros de cada bloque (mitades de la segunda columna)
+        center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
+        center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
 
-        sig_recep_w = 65
-        sig_recep_h = 20
-
+        # Longitud de línea igual para ambas
         pdf.set_font("Arial", "B", 7.5)
         w_rc = pdf.get_string_width("RECEPCIÓN CONFORME")
         w_pi = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
         w_pc = pdf.get_string_width("PERSONAL CLÍNICO")
-        pad_block = 10
-        block_w_left  = max(sig_recep_w, w_rc, w_pi) + pad_block
-        block_w_right = max(sig_recep_w, w_rc, w_pc) + pad_block
+        text_block_w = max(w_rc, w_pi, w_pc) + 12  # padding
+        half_w = ancho_area / 2.0
+        max_line_len = half_w - 8  # colchón a los bordes internos
+        line_len = min(max(text_block_w, 65), max_line_len)  # >= firmas y = para ambas
 
-        x_block_left  = center_left  - block_w_left/2.0
-        x_block_right = center_right - block_w_right/2.0
+        # Firmas (encima de la línea), ajustadas a la longitud disponible
+        sig_w = min(65, line_len - 6)
+        sig_h = 20
 
         y_top = pdf.get_y()
-        y_sig = y_top + 2.0  # firmas arriba de la línea
+        y_sig = y_top + 2.0
 
-        # Firmas centradas
+        # Izquierda
+        x_line_left = center_left - line_len/2.0
         add_signature_inline(pdf, canvas_result_ingenieria,
-                             x=center_left - sig_recep_w/2.0, y=y_sig,
-                             w_mm=sig_recep_w, h_mm=sig_recep_h)
+                             x=center_left - sig_w/2.0, y=y_sig, w_mm=sig_w, h_mm=sig_h)
+        # Derecha
+        x_line_right = center_right - line_len/2.0
         add_signature_inline(pdf, canvas_result_clinico,
-                             x=center_right - sig_recep_w/2.0, y=y_sig,
-                             w_mm=sig_recep_w, h_mm=sig_recep_h)
+                             x=center_right - sig_w/2.0, y=y_sig, w_mm=sig_w, h_mm=sig_h)
 
-        # Línea continua bajo las firmas
-        y_line = y_sig + sig_recep_h + 3.0
+        # Dibujar líneas iguales
+        y_line = y_sig + sig_h + 3.0
         pdf.set_draw_color(0, 0, 0)
-        pdf.line(x_block_left,  y_line, x_block_left  + block_w_left,  y_line)
-        pdf.line(x_block_right, y_line, x_block_right + block_w_right, y_line)
+        pdf.line(x_line_left,  y_line, x_line_left  + line_len, y_line)
+        pdf.line(x_line_right, y_line, x_line_right + line_len, y_line)
 
-        # Textos en dos líneas, alineación a la izquierda (como el ejemplo)
-        pdf.set_xy(x_block_left,  y_line + 0.8)
-        pdf.cell(block_w_left, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'L')
-        pdf.set_xy(x_block_left,  pdf.get_y())
-        pdf.cell(block_w_left, 3.6, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'L')
+        # Textos centrados bajo cada línea
+        pdf.set_xy(x_line_left,  y_line + 0.8)
+        pdf.cell(line_len, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'C')
+        pdf.set_xy(x_line_left,  pdf.get_y())
+        pdf.cell(line_len, 3.6, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
 
-        pdf.set_xy(x_block_right, y_line + 0.8)
-        pdf.cell(block_w_right, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'L')
-        pdf.set_xy(x_block_right, pdf.get_y())
-        pdf.cell(block_w_right, 3.6, "PERSONAL CLÍNICO", 0, 0, 'L')
+        pdf.set_xy(x_line_right, y_line + 0.8)
+        pdf.cell(line_len, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'C')
+        pdf.set_xy(x_line_right, pdf.get_y())
+        pdf.cell(line_len, 3.6, "PERSONAL CLÍNICO", 0, 0, 'C')
 
         pdf.set_y(max(y_line + 7, pdf.get_y()))
 
