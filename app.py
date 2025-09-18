@@ -98,26 +98,6 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=4.0, cell_fs=6, ind
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.5)
 
-# FECHA en casillas debajo del título
-def draw_date_boxes(pdf, x, y, dt, box=4.8, gap=0.9, group_gap=2.0, label_w=12):
-    pdf.set_font("Arial", "", 7)
-    pdf.set_xy(x, y)
-    pdf.cell(label_w, box, "FECHA:", 0, 0, "L")
-    x0 = pdf.get_x()
-    digits = list(dt.strftime("%d%m%Y"))  # 8 dígitos
-    groups = [2, 2, 4]
-    idx = 0
-    for g_i, g_len in enumerate(groups):
-        for _ in range(g_len):
-            pdf.rect(x0, y, box, box)
-            pdf.set_xy(x0, y)
-            pdf.cell(box, box, digits[idx], 0, 0, "C")
-            x0 += box + gap
-            idx += 1
-        if g_i < len(groups) - 1:
-            x0 += group_gap
-    return y + box  # bottom
-
 # ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -272,7 +252,7 @@ def main():
 
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
-        except Exception as e:
+        except Exception:
             st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
         pdf.set_font("Arial", "B", 7)
@@ -286,10 +266,7 @@ def main():
         pdf.set_xy(title_x, title_y)
         pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
-        # FECHA en casillas justo debajo de la franja
-        date_bottom = draw_date_boxes(pdf, x=title_x, y=title_y + title_h + 1, dt=fecha, box=4.8)
-
-        header_bottom = max(logo_y + logo_h, date_bottom)
+        header_bottom = max(logo_y + logo_h, title_y + title_h)
         content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
@@ -297,7 +274,31 @@ def main():
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7)
         line_h = 3.5
-        pdf.cell(0, line_h, f"Marca: {marca}", 0, 1)
+
+        # --- FECHA (3 celdas) alineada con "Marca" y pegada al borde de OK/NO/N/A ---
+        y_marca = pdf.get_y()
+        # Ancho de cada columna de fecha (mismo ancho)
+        date_col_w = 11.0
+        date_table_w = date_col_w * 3
+        x_date = FIRST_TAB_RIGHT - date_table_w  # pegado al borde derecho de la 1ª tabla
+        # Contenido fecha
+        dd = f"{fecha.day:02d}"
+        mm = f"{fecha.month:02d}"
+        yyyy = f"{fecha.year:04d}"
+        # Reservar ancho para "Marca" sin invadir la fecha
+        marca_text_w = max(20, x_date - FIRST_COL_LEFT - 2)
+
+        # Línea "Marca"
+        pdf.set_xy(FIRST_COL_LEFT, y_marca)
+        pdf.cell(marca_text_w, line_h, f"Marca: {marca}", 0, 1)
+
+        # Dibujar tabla de fecha (tres columnas) a la MISMA altura
+        pdf.set_xy(x_date, y_marca)
+        pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
+        pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
+        pdf.cell(date_col_w, line_h, yyyy, 1, 1, "C")
+
+        # Resto de líneas informativas
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, line_h, f"Modelo: {modelo}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
@@ -306,7 +307,8 @@ def main():
         pdf.cell(0, line_h, f"Número de Inventario: {inventario}", 0, 1)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, line_h, f"Ubicación: {ubicacion}", 0, 1)
-        # (La FECHA ya va debajo del título en casillas)
+
+        # separación con el primer título
         pdf.ln(3.0)
 
         LEFT_ROW_H = 3.1
