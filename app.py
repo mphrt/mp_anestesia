@@ -224,9 +224,8 @@ def main():
                                           key="canvas_clinico")
 
     if st.button("Generar PDF"):
-        # ======= márgenes: izquierda y derecha iguales =======
-        SIDE_MARGIN = 6  # mm (izq = der)
-        TOP_MARGIN  = 4  # mm
+        SIDE_MARGIN = 6
+        TOP_MARGIN  = 4
 
         pdf = FPDF('L', 'mm', 'A4')
         pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
@@ -247,8 +246,8 @@ def main():
 
         # ======= ENCABEZADO =======
         logo_x, logo_y = 2, 2
-        LOGO_W_MM = 54          # ← AGRANDADO un poco (antes 48)
-        TITLE_UP_MM = 3         # ← SUBIR la franja de “PAUTA…” (mm)
+        LOGO_W_MM = 60          # ↑ un poco más grande
+        TITLE_UP_MM = 8         # ↑ sube más la franja “PAUTA…”
 
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
@@ -265,11 +264,10 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris: alineada y SUBIDA unos mm respecto al borde inferior del logo
+        # Franja gris: se sube TITLE_UP_MM (sin pasar por encima del borde superior del logo)
         pdf.set_font("Arial", "B", 7)
         title_h = 6
         title_x = logo_x + LOGO_W_MM + sep
-        # mover hacia ARRIBA: restar TITLE_UP_MM pero nunca más arriba que la parte superior del logo
         title_y = max(logo_y, (logo_y + logo_h) - TITLE_UP_MM)
         cell_w = max(10, FIRST_TAB_RIGHT - title_x)
 
