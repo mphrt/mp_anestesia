@@ -7,6 +7,43 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
+# ========= Pie de página: PDF con footer =========
+FOOTER_LINES = [
+    "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)",
+    "UNIDAD DE INGENIERÍA CLÍNICA",
+    "HOSPITAL REGIONAL DE TALCA",
+]
+
+class PDF(FPDF):
+    def __init__(self, *args, footer_lines=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._footer_lines = footer_lines or []
+
+    def footer(self):
+        # Posicionar a ~15 mm del borde inferior
+        self.set_y(-15)
+        # Línea superior del pie (siguiendo márgenes)
+        x1 = self.l_margin
+        x2 = self.w - self.r_margin
+        y  = self.get_y()
+        self.set_draw_color(0, 0, 0)
+        self.set_line_width(0.2)
+        self.line(x1, y, x2, y)
+
+        # Texto del pie (alineado a la izquierda, siguiendo margen)
+        self.ln(1.6)
+        self.set_x(self.l_margin)
+        if not self._footer_lines:
+            return
+        # Primera línea en negrita
+        self.set_font("Arial", "B", 7.0)
+        self.cell(0, 3.4, self._footer_lines[0], ln=1, align="L")
+        # Resto normal
+        self.set_font("Arial", "", 6.6)
+        for line in self._footer_lines[1:]:
+            self.set_x(self.l_margin)
+            self.cell(0, 3.2, line, ln=1, align="L")
+
 # ========= utilidades =========
 def _crop_signature(canvas_result):
     if canvas_result.image_data is None:
@@ -62,7 +99,6 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
-    # Cabecera gris con bordes en OK/NO/N/A
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -73,7 +109,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
-    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -236,7 +271,8 @@ def main():
         SIDE_MARGIN = 9
         TOP_MARGIN  = 4
 
-        pdf = FPDF('L', 'mm', 'A4')
+        # Usa la clase PDF con pie de página
+        pdf = PDF('L', 'mm', 'A4', footer_lines=FOOTER_LINES)
         pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
         pdf.set_auto_page_break(True, margin=TOP_MARGIN + 8)
         pdf.add_page()
@@ -450,10 +486,8 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción: líneas y textos NO se mueven; solo imagen con offsets ----------
+        # ---------- Firmas de recepción (líneas y textos fijos; imágenes ajustables por offset) ----------
         ancho_area = col_total_w
-
-        # Centros de cada bloque dentro de la 2ª columna (izq y der)
         center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
         center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
 
@@ -466,27 +500,21 @@ def main():
         max_line_len = half_w - 8
         line_len = min(max(text_block_w, 65), max_line_len)
 
-        # Tamaño de las imágenes de firma
         sig_w = min(65, line_len - 6)
         sig_h = 20
 
-        # ==== AJUSTES MANUALES DE POSICIÓN DE LAS IMÁGENES (en mm) ====
-        # Valores positivos X -> derecha, negativos X -> izquierda
-        # Valores positivos Y -> abajo,   negativos Y -> arriba
-        SIG_OFF_X_LEFT  = 15
+        # === offsets manuales para mover solo las imágenes de firma ===
+        SIG_OFF_X_LEFT  = 0
         SIG_OFF_Y_LEFT  = 0
-        SIG_OFF_X_RIGHT = 15
+        SIG_OFF_X_RIGHT = 0
         SIG_OFF_Y_RIGHT = 0
-        # ===============================================================
 
         y_top = pdf.get_y()
-        y_sig = y_top + 2.0  # base vertical (no movemos líneas/textos)
+        y_sig = y_top + 2.0
 
-        # Coordenadas exactas de las líneas (NO modificar si te gustan donde están)
         x_line_left  = center_left  - line_len / 2.0
         x_line_right = center_right - line_len / 2.0
 
-        # Imágenes de firma: SOLO se aplican los offsets manuales
         add_signature_inline(pdf, canvas_result_ingenieria,
                              x=center_left - sig_w/2.0 + SIG_OFF_X_LEFT,
                              y=y_sig + SIG_OFF_Y_LEFT,
@@ -496,13 +524,11 @@ def main():
                              y=y_sig + SIG_OFF_Y_RIGHT,
                              w_mm=sig_w, h_mm=sig_h)
 
-        # Líneas (igual que estaban)
         y_line = y_sig + sig_h + 3.0
         pdf.set_draw_color(0, 0, 0)
         pdf.line(x_line_left,  y_line, x_line_left  + line_len, y_line)
         pdf.line(x_line_right, y_line, x_line_right + line_len, y_line)
 
-        # Textos (centrados bajo su línea)
         pdf.set_xy(x_line_left,  y_line + 0.8)
         pdf.cell(line_len, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'C')
         pdf.set_xy(x_line_left,  pdf.get_y())
