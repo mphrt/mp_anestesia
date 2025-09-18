@@ -48,7 +48,7 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=16):
         st.error(f"Error al añadir imagen (inline sin borde): {e}")
 
 def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w=36):
-    pdf.set_font("Arial", "", 8)  # ↑ tamaño
+    pdf.set_font("Arial", "", 8)  # tamaño general ↑
     pdf.set_xy(x, y)
     pdf.cell(label_w, size, "Equipo Operativo:", 0, 0)
     x_box_si = x + label_w + 2
@@ -68,8 +68,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.6, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
-    # Sangría extra en el título (se simula con espacios)
-    title_prefix = " " * (title_tab_spaces * 2)
+    title_prefix = " " * (title_tab_spaces * 2)  # “tabulación” visual en el título
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230)
     pdf.set_text_color(0, 0, 0)
@@ -103,24 +102,23 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.8, cell_fs=6.2, i
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.8)
 
-def draw_observaciones_table(pdf, x, y, w, h, text, head_h=5.0, fs=8):
-    """Tabla con cabecera gris 'Observaciones' y caja con borde para el texto."""
+def draw_boxed_text(pdf, x, y, w, min_h, title, text, head_h=5.0, fs=8):
+    """Encabezado gris con borde + área de texto con borde completo (sin usar max_line_height)."""
+    # Cabecera
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs)
-    pdf.cell(w, head_h, "Observaciones", border=1, ln=1, align="L", fill=True)
+    pdf.cell(w, head_h, title, border=1, ln=1, align="L", fill=True)
+
+    # Cuerpo: dibujar caja primero y luego escribir dentro
+    y_body = y + head_h
+    pdf.rect(x, y_body, w, min_h)  # borde completo
+    pdf.set_xy(x + 1.2, y_body + 1.2)
     pdf.set_font("Arial", "", fs)
-    # Caja cuerpo
-    pdf.set_x(x)
-    pdf.multi_cell(w, 4, text, border=1, align="L", max_line_height=4)
-    # Asegurar altura mínima h
-    bottom_now = pdf.get_y()
-    min_bottom = y + head_h + h
-    if bottom_now < min_bottom:
-        # relleno invisible para completar alto
-        pdf.set_xy(x, bottom_now)
-        pdf.cell(w, min_bottom - bottom_now, "", border=0, ln=1)
+    pdf.multi_cell(w - 2.4, 4, text, border=0, align="L")
+    # garantizar altura mínima
+    pdf.set_y(max(pdf.get_y(), y_body + min_h))
 
 # ========= app =========
 def main():
@@ -224,7 +222,7 @@ def main():
     col_tecnico, col_ingenieria, col_clinico = st.columns(3)
     with col_tecnico:
         st.write("Técnico Encargado:")
-        # ↑ lienzo más grande para firmar fácil
+        # lienzo más grande para firmar
         canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
                                           stroke_color="#000000", background_color="#EEEEEE",
                                           height=190, width=360, drawing_mode="freedraw",
@@ -259,7 +257,7 @@ def main():
         FIRST_COL_LEFT = SIDE_MARGIN
         usable_w = page_w - 2*SIDE_MARGIN
         col_total_w = (usable_w - COL_GAP) / 2.0
-        COL_W = 12.0  # columnas OK/NO/N/A iguales
+        COL_W = 12.0
         ITEM_W = max(62.0, col_total_w - 3 * COL_W)
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
@@ -282,11 +280,11 @@ def main():
         except Exception:
             st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
-        # Título (MISMO tamaño que antes, pero franja más delgada y alineada)
-        pdf.set_font("Arial", "B", 7)  # <= el único que NO sube
-        title_h = 5.0                   # apenas más alto que la letra
+        # Título (único tamaño que no sube)
+        pdf.set_font("Arial", "B", 7)
+        title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
-        title_y = (logo_y + logo_h) - title_h  # borde inferior alineado con el del logo
+        title_y = (logo_y + logo_h) - title_h
         cell_w  = max(10, FIRST_TAB_RIGHT - title_x)
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
@@ -299,7 +297,7 @@ def main():
 
         # ======= COLUMNA IZQUIERDA =======
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.set_font("Arial", "", 8)  # ↑ tamaño general
+        pdf.set_font("Arial", "", 8)  # tamaño general ↑
         line_h = 3.8
 
         # FECHA (3 celdas) en la línea de "Marca" y pegada al borde de la 1ª tabla
@@ -419,18 +417,16 @@ def main():
         pdf.ln(2)
 
         # ---------- Observaciones en TABLA (encabezado gris) ----------
-        obs_box_h = 22  # alto mínimo del área de texto
-        draw_observaciones_table(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                                 w=col_total_w, h=obs_box_h, text=observaciones, head_h=5.0, fs=8)
+        draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                        w=col_total_w, min_h=22,
+                        title="Observaciones", text=observaciones, head_h=5.0, fs=8)
         pdf.ln(2)
 
-        # ---------- Observaciones (uso interno) como antes ----------
-        pdf.set_x(SECOND_COL_LEFT)
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 4.2, "Observaciones (uso interno):", ln=True)
-        pdf.set_font("Arial", "", 8)
-        pdf.set_x(SECOND_COL_LEFT)
-        pdf.multi_cell(col_total_w, 4.0, f"{observaciones_interno}")
+        # ---------- Observaciones (uso interno) EN TABLA (nuevo) ----------
+        draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                        w=col_total_w, min_h=18,
+                        title="Observaciones (uso interno)", text=observaciones_interno,
+                        head_h=5.0, fs=8)
         pdf.ln(1)
 
         # Equipo Operativo con casillas SI/NO
@@ -438,7 +434,7 @@ def main():
         draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4.5, label_w=40)
         pdf.ln(2)
 
-        # Nombre Técnico/Ingeniero + "Firma:" + firma SIN rectángulo en la MISMA línea (más grande)
+        # Nombre Técnico/Ingeniero + "Firma:" + firma SIN rectángulo en la MISMA línea
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 8)
         y_nombre = pdf.get_y()
@@ -458,13 +454,13 @@ def main():
         # ---------- Firmas de recepción (más grandes y centradas sobre la línea) ----------
         pdf.ln(5) 
         ancho_area = col_total_w
-        ancho_caja = min(70, ancho_area * 0.48)  # caja más ancha
+        ancho_caja = min(70, ancho_area * 0.48)
         x_izq = SECOND_COL_LEFT + (ancho_area/4) - (ancho_caja/2)
         x_der = SECOND_COL_LEFT + (3*ancho_area/4) - (ancho_caja/2)
 
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 4
-        sig_recep_w = 58  # firmas más grandes
+        sig_recep_w = 58
         sig_recep_h = 16
         x_sig_izq = x_izq + (ancho_caja - sig_recep_w) / 2.0
         x_sig_der = x_der + (ancho_caja - sig_recep_w) / 2.0
@@ -477,7 +473,7 @@ def main():
         pdf.set_x(x_izq); pdf.cell(ancho_caja, 4, "_________________________", 0, 0, 'C')
         pdf.set_x(x_der);  pdf.cell(ancho_caja, 4, "_________________________", 0, 1, 'C')
 
-        # Textos en NEGRITA centrados
+        # Textos en NEGRITA
         label_y = pdf.get_y() - 1
         pdf.set_font("Arial", "B", 8)
         pdf.set_xy(x_izq, label_y);     pdf.cell(ancho_caja, 4, "RECEPCIÓN CONFORME", 0, 0, 'C')
