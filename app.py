@@ -59,8 +59,11 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
     pdf.set_xy(x_box_no, y); pdf.cell(size, size, "X" if selected == "NO" else "", 0, 0, "C")
     pdf.set_xy(x_box_no + size + text_gap, y); pdf.cell(6, size, "NO", 0, 1)
 
-# Cabecera (título + OK/NO/N/A en la misma fila, fondo gris)
-def draw_section_header(pdf, section_title, x_pos, item_w, col_w, row_h=3.4, head_fs=7.2, cell_fs=6.2, title_tab_spaces=2):
+# Cabecera + filas (título gris con OK/NO/N/A; filas sin bordes en texto)
+def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
+                          row_h=3.4, head_fs=7.2, cell_fs=6.2,
+                          indent_w=5.0, title_tab_spaces=2):
+    # Cabecera
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -71,14 +74,18 @@ def draw_section_header(pdf, section_title, x_pos, item_w, col_w, row_h=3.4, hea
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
-# Cabecera + filas (para las demás secciones)
-def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
-                          row_h=3.4, head_fs=7.2, cell_fs=6.2,
-                          indent_w=5.0, title_tab_spaces=2):
-    draw_section_header(pdf, section_title, x_pos, item_w, col_w, row_h, head_fs, cell_fs, title_tab_spaces)
-    create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=row_h, cell_fs=cell_fs, indent_w=indent_w)
+    # Filas
+    pdf.set_font("Arial", "", cell_fs)
+    for item, value in items:
+        pdf.set_x(x_pos)
+        pdf.cell(indent_w, row_h, "", border=0, ln=0)
+        pdf.cell(max(1, item_w - indent_w), row_h, item, border=0, ln=0, align="L")
+        pdf.cell(col_w, row_h, "X" if value == "OK" else "", border=1, ln=0, align="C")
+        pdf.cell(col_w, row_h, "X" if value == "NO" else "", border=1, ln=0, align="C")
+        pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
+    pdf.ln(1.6)
 
-# Solo filas (texto sin borde; casillas con borde)
+# Solo filas (para 5.7–5.8; mismo interlineado que subtítulos)
 def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, indent_w=5.0):
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
@@ -90,7 +97,7 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.4)
 
-def draw_boxed_text(pdf, x, y, w, min_h, title, text, head_h=4.8, fs=7.5, body_line_h=3.4):
+def draw_boxed_text(pdf, x, y, w, min_h, title, text, head_h=4.8, fs=7.5, body_line_h=3.6):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs)
@@ -282,6 +289,7 @@ def main():
         gap_lab_box  = 1.8
         x_label      = x_date - label_w - gap_lab_box
         marca_text_w = max(22, x_label - FIRST_COL_LEFT - 2)
+
         dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
 
         pdf.set_xy(FIRST_COL_LEFT, y_marca); pdf.cell(marca_text_w, line_h, f"Marca: {marca}", 0, 0, "L")
@@ -302,37 +310,47 @@ def main():
 
         LEFT_ROW_H = 3.4
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H)
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # (Se quita el punto 5 de la columna izquierda)
+        # 5.1–5.6 en la primera columna (con tabla)
+        vm_izq = [(it, val) for it, val in ventilador_mecanico
+                  if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
+                  or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
+        create_checkbox_table(pdf, "5. Ventilador mecánico", vm_izq, x_pos=FIRST_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
+        pdf.ln(1.6)
 
         # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
-
-        # Cabecera 5 en gris con OK/NO/N/A en la MISMA FILA
-        draw_section_header(pdf, "5. Ventilador mecánico", x_pos=SECOND_COL_LEFT,
-                            item_w=ITEM_W, col_w=COL_W, row_h=3.4)
-
-        # Texto entre 5 y 5.1 (sin tabla)
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 7.5)
+        # Texto entre 5 y 5.1 (sin tabla) – frase solicitada
         pdf.multi_cell(col_total_w, 3.4, "Verifique que el equipo muestra en pantalla los siguientes parámetros:", border=0)
         pdf.ln(0.4)
 
-        # Desde 5.1 en adelante, tabla con filas
-        create_rows_only(pdf, ventilador_mecanico, x_pos=SECOND_COL_LEFT,
-                         item_w=ITEM_W, col_w=COL_W, row_h=3.4, cell_fs=6.2, indent_w=5.0)
+        # 5.7–5.8 (se mantienen como estaban, en filas con casillas)
+        vm_der = [(it, val) for it, val in ventilador_mecanico
+                  if it.startswith("5.7.") or it.startswith("5.8.")]
+        if vm_der:
+            create_rows_only(pdf, vm_der, x_pos=SECOND_COL_LEFT,
+                             item_w=ITEM_W, col_w=COL_W, row_h=3.4, cell_fs=6.2, indent_w=5.0)
 
         create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=SECOND_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=3.4)
+                              item_w=ITEM_W, col_w=COL_W, row_h=3.4,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas (sin líneas) =======
+        # ======= 7. Instrumentos de análisis (fila gris + 2 columnas SIN LÍNEAS) =======
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
@@ -345,18 +363,18 @@ def main():
         right_x = SECOND_COL_LEFT + col_w + gap_cols
         label_w = 17.0
         text_w = col_w - label_w - 3.0
-        row_h_field = 3.4  # mismo interlineado que subtítulos
+        row_h_field = 3.4  # MISMO interlineado que subtítulos
 
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
+        # Columnas sin líneas (solo espacio para escribir)
         def draw_column_no_lines(x, y, data):
             pdf.set_font("Arial", "", 7.5)
             yy = y
             def field(lbl, val=""):
                 nonlocal yy
                 pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-                # sin líneas: solo espacio en blanco para escribir
                 pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
                 yy += row_h_field + 1.0
             field("EQUIPO",  data.get('equipo', ''))
@@ -369,10 +387,11 @@ def main():
         end_right = draw_column_no_lines(right_x, start_y_7, e1)
         pdf.set_y(max(end_left, end_right) + 2)
 
-        # ---------- Observaciones ----------
+        # ---------- Observaciones (general) ----------
         draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                         w=col_total_w, min_h=20,
-                        title="Observaciones", text=observaciones)
+                        title="Observaciones", text=observaciones,
+                        head_h=4.8, fs=7.5, body_line_h=3.4)
         pdf.ln(2)
 
         # ---------- Equipo Operativo + Nombre/Firma + Empresa ----------
@@ -393,12 +412,14 @@ def main():
         pdf.set_x(SECOND_COL_LEFT)
         pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
 
-        pdf.ln(2.0)  # espacio solicitado
+        # Extra espacio
+        pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
         draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                         w=col_total_w, min_h=16,
-                        title="Observaciones (uso interno)", text=observaciones_interno)
+                        title="Observaciones (uso interno)", text=observaciones_interno,
+                        head_h=4.8, fs=7.5, body_line_h=3.4)
         pdf.ln(2)
 
         # ---------- Firmas de recepción ----------
@@ -416,20 +437,22 @@ def main():
         add_signature_inline(pdf, canvas_result_ingenieria, x=x_sig_izq, y=y_firma_image, w_mm=sig_recep_w, h_mm=sig_recep_h)
         add_signature_inline(pdf, canvas_result_clinico,     x=x_sig_der, y=y_firma_image, w_mm=sig_recep_w, h_mm=sig_recep_h)
 
+        # líneas
         y_lineas = y_firma_start + 24
         pdf.set_y(y_lineas)
         pdf.set_x(x_izq); pdf.cell(ancho_caja, 3.8, "_________________________", 0, 0, 'C')
         pdf.set_x(x_der);  pdf.cell(ancho_caja, 3.8, "_________________________", 0, 1, 'C')
 
+        # etiquetas con una ligera “tabulación” (sangría visual) para centrar mejor
         pdf.set_font("Arial", "B", 7.5)
         label_y = pdf.get_y() - 1
-        pdf.set_xy(x_izq, label_y);       pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
-        pdf.set_xy(x_izq, label_y + 3.8); pdf.cell(ancho_caja, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_xy(x_der, label_y);       pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
-        pdf.set_xy(x_der, label_y + 3.8); pdf.cell(ancho_caja, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
+        tab = "   "  # pequeña tabulación
+        pdf.set_xy(x_izq, label_y);         pdf.cell(ancho_caja, 3.8, f"{tab}RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_izq, label_y + 3.8);   pdf.cell(ancho_caja, 3.8, f"{tab}PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_xy(x_der, label_y);         pdf.cell(ancho_caja, 3.8, f"{tab}RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_der, label_y + 3.8);   pdf.cell(ancho_caja, 3.8, f"{tab}PERSONAL CLÍNICO", 0, 0, 'C')
         pdf.set_y(label_y + 9)
 
-        # Descargar
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(),
                            file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
