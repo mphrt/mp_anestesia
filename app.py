@@ -88,7 +88,6 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5, label_w=3
     pdf.set_xy(x_box_no + size + text_gap, y)
     pdf.cell(6, size, "NO", 0, 1)
 
-# tabla checklists con anchos dinámicos
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=4.0):
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 7)
@@ -235,7 +234,6 @@ def main():
         pdf.add_page()
 
         page_w = pdf.w
-        page_h = pdf.h
 
         # ======= columnas (mitades de ancho útil) =======
         COL_GAP = 6
@@ -248,30 +246,32 @@ def main():
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
         # ======= ENCABEZADO =======
-        # Logo: (MISMO TAMAÑO que el código pasado)
         logo_x, logo_y = 2, 2
-        desired_logo_w = 48  # ← se mantiene igual
+        LOGO_W_MM = 54          # ← AGRANDADO un poco (antes 48)
+        TITLE_UP_MM = 3         # ← SUBIR la franja de “PAUTA…” (mm)
+
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
         try:
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
-            logo_h = desired_logo_w * ratio
+            logo_h = LOGO_W_MM * ratio
         except Exception:
-            logo_h = desired_logo_w * 0.8
+            logo_h = LOGO_W_MM * 0.8
 
         try:
-            pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=desired_logo_w)
+            pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris: (MISMO COMPORTAMIENTO) alineada al borde inferior del logo
+        # Franja gris: alineada y SUBIDA unos mm respecto al borde inferior del logo
         pdf.set_font("Arial", "B", 7)
         title_h = 6
-        title_x = logo_x + desired_logo_w + sep
-        title_y = logo_y + logo_h  # ← igual que antes
-        cell_w = max(10, FIRST_TAB_RIGHT - title_x)  # termina en el borde derecho de la 1ª tabla
+        title_x = logo_x + LOGO_W_MM + sep
+        # mover hacia ARRIBA: restar TITLE_UP_MM pero nunca más arriba que la parte superior del logo
+        title_y = max(logo_y, (logo_y + logo_h) - TITLE_UP_MM)
+        cell_w = max(10, FIRST_TAB_RIGHT - title_x)
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
