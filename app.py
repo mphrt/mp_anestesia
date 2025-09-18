@@ -95,19 +95,31 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.4)
 
-def draw_boxed_text(pdf, x, y, w, min_h, title, text, head_h=4.8, fs=7.5, body_line_h=3.6):
-    # Encabezado
+def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
+                         head_h=4.6, fs_head=7.2, fs_body=7.0,
+                         body_line_h=3.2, padding=1.2):
+    """Caja con título gris, cuerpo pequeño que se EXPANDE si el texto es largo."""
+    # Título
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", "B", fs)
+    pdf.set_font("Arial", "B", fs_head)
     pdf.cell(w, head_h, title, border=1, ln=1, align="L", fill=True)
-    # Cuerpo
+
+    # Cuerpo (dibujamos el borde DESPUÉS para ajustarlo a la altura real)
     y_body = y + head_h
-    pdf.rect(x, y_body, w, min_h)
-    pdf.set_xy(x + 1.2, y_body + 1.2)
-    pdf.set_font("Arial", "", fs)
-    pdf.multi_cell(w - 2.4, body_line_h, text, border=0, align="L")
-    pdf.set_y(max(pdf.get_y(), y_body + min_h))
+    x_text = x + padding
+    w_text = max(1, w - 2*padding)
+    pdf.set_xy(x_text, y_body + padding)
+    pdf.set_font("Arial", "", fs_body)
+    start_y = pdf.get_y()
+    if text:
+        pdf.multi_cell(w_text, body_line_h, text, border=0, align="L")
+    end_y = pdf.get_y()
+
+    # Altura final
+    content_h = max(min_h, (end_y - (y_body + padding)) + padding)
+    pdf.rect(x, y_body, w, content_h)
+    pdf.set_y(y_body + content_h)
 
 # ========= app =========
 def main():
@@ -365,9 +377,9 @@ def main():
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
-        # Columnas SIN líneas (ni bordes inferiores)
+        # Columnas SIN líneas (ni bordes inferiores) y con fuente igual a subtítulos (6.2)
         def draw_column_no_lines(x, y, data):
-            pdf.set_font("Arial", "", 7.5)
+            pdf.set_font("Arial", "", 6.2)   # ← mismo tamaño que subtítulos
             yy = y
             def field(lbl, val=""):
                 nonlocal yy
@@ -385,10 +397,11 @@ def main():
         pdf.set_y(max(end_left, end_right) + 2)
 
         # ---------- Observaciones (general) ----------
-        draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                        w=col_total_w, min_h=20,
-                        title="Observaciones", text=observaciones,
-                        head_h=4.8, fs=7.5, body_line_h=3.4)
+        # Caja MÁS PEQUEÑA, pero crece si el texto es largo
+        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                             w=col_total_w, min_h=10,
+                             title="Observaciones", text=observaciones,
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         # ---------- Equipo Operativo + Nombre/Firma + Empresa ----------
@@ -413,10 +426,11 @@ def main():
         pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
-        draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                        w=col_total_w, min_h=16,
-                        title="Observaciones (uso interno)", text=observaciones_interno,
-                        head_h=4.8, fs=7.5, body_line_h=3.4)
+        # Caja MÁS PEQUEÑA, con auto-ajuste
+        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                             w=col_total_w, min_h=10,
+                             title="Observaciones (uso interno)", text=observaciones_interno,
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         # ---------- Firmas de recepción ----------
@@ -441,9 +455,9 @@ def main():
 
         pdf.set_font("Arial", "B", 7.5)
         label_y = pdf.get_y() - 1
-        pdf.set_xy(x_izq, label_y);     pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_izq, label_y);       pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
         pdf.set_xy(x_izq, label_y + 3.8); pdf.cell(ancho_caja, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_xy(x_der, label_y);     pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_der, label_y);       pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
         pdf.set_xy(x_der, label_y + 3.8); pdf.cell(ancho_caja, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
         pdf.set_y(label_y + 9)
 
