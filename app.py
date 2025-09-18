@@ -449,8 +449,8 @@ def main():
         # ---------- Firmas de recepción: dos líneas iguales, centradas en la 2ª columna ----------
         ancho_area = col_total_w
         # Centros de cada bloque (mitades de la segunda columna)
-        center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
-        center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
+        center_left  = SECOND_COL_LEFT + (ancho_area * 0.45)
+        center_right = SECOND_COL_LEFT + (ancho_area * 1)
 
         # Longitud de línea igual para ambas
         pdf.set_font("Arial", "B", 7.5)
