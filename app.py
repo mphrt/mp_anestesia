@@ -1,348 +1,228 @@
 import streamlit as st
-import datetime
-import io
-import tempfile
-import numpy as np
+import datetime, io, numpy as np
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from fpdf import FPDF
 
-# =============== Utilidades para firmas ===============
+# --- PDF stamping ---
+from pypdf import PdfReader, PdfWriter, PageObject
+from reportlab.pdfgen import canvas as rl_canvas
+from reportlab.lib.utils import ImageReader
+
+# ===========================
+# CONFIG: posiciones (mm)
+# ===========================
+MM = 2.83465  # 1 mm en puntos
+
+CFG = {
+    "cab": {"xL": 25, "xR": 200, "row": 7.5},
+    "tbl_left": {"x_text": 20, "w_text": 120, "w_col": 10, "ok": 140, "no": 150, "na": 160, "row": 6},
+    "tbl_right": {"x_text": 185, "w_text": 98, "w_col": 10, "ok": 283, "no": 293, "na": 303, "row": 6},
+    "y": {
+        "sec1": 70, "sec2": 102, "sec3": 139, "sec4": 190,
+        "sec5a": 46, "sec5b": 83, "sec6": 106, "ia": 132,
+        "obs": 160, "op": 178, "tec": 186,
+        "firmaTecBox": (255, 181, 38, 12),
+        "emp": 194, "obs_int": 206,
+        "rc_left": (60, 226, 65, 15),
+        "rc_right": (200, 226, 65, 15),
+    }
+}
+
 def recortar_firma(canvas_result):
-    if canvas_result.image_data is None:
-        return None, None
-    img_array = canvas_result.image_data.astype(np.uint8)
-    img = Image.fromarray(img_array)
+    if canvas_result.image_data is None: return None
+    arr = canvas_result.image_data.astype(np.uint8)
+    img = Image.fromarray(arr).convert("RGB")
     gray = img.convert("L")
-    coords = np.argwhere(np.array(gray) < 230)
-    if coords.size == 0:
-        return None, None
-    min_y, min_x = coords.min(axis=0)
-    max_y, max_x = coords.max(axis=0)
-    cropped = img.crop((min_x, min_y, max_x + 1, max_y + 1))
-    if cropped.mode == "RGBA":
-        cropped = cropped.convert("RGB")
+    ys, xs = np.where(np.array(gray) < 230)
+    if len(xs) == 0: return None
+    x1, y1, x2, y2 = xs.min(), ys.min(), xs.max()+1, ys.max()+1
+    crop = img.crop((x1, y1, x2, y2))
     bio = io.BytesIO()
-    cropped.save(bio, format="PNG")
+    crop.save(bio, format="PNG")
     bio.seek(0)
-    # guardamos temporal porque FPDF.image() necesita path
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    tmp.write(bio.read())
-    tmp.flush()
-    return tmp, cropped.size  # (file, (w,h))
+    return bio
 
-def dibujar_firma_centrada(pdf, tmpfile, img_size, x, y, box_w, box_h):
-    if not tmpfile:
-        return
-    iw, ih = img_size
-    # FPDF trabaja en mm; asumimos densidad relativa
-    scale = min(box_w / iw, box_h / ih)
-    dw, dh = iw * scale, ih * scale
-    cx = x + (box_w - dw) / 2
-    cy = y + (box_h - dh) / 2
-    pdf.image(tmpfile.name, x=cx, y=cy, w=dw, h=dh)
+def draw_img_centered(c, png_bytes, x_mm, y_mm, w_mm, h_mm, page_h_pt):
+    if not png_bytes: return
+    img = Image.open(png_bytes)
+    iw, ih = img.size
+    scale = min((w_mm*MM)/iw, (h_mm*MM)/ih)
+    dw, dh = iw*scale, ih*scale
+    x_pt = x_mm*MM + (w_mm*MM - dw)/2
+    y_pt = page_h_pt - (y_mm*MM) - h_mm*MM + (h_mm*MM - dh)/2
+    c.drawImage(ImageReader(png_bytes), x_pt, y_pt, width=dw, height=dh, mask='auto')
 
-# =============== Componentes UI ===============
-def block_streamlit(title, items):
-    st.markdown(f"### {title}")
+def draw_text(c, s, x_mm, y_mm, page_h_pt, size=9, bold=False, centered=False):
+    c.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+    x_pt = x_mm*MM
+    y_pt = page_h_pt - y_mm*MM
+    if centered: c.drawCentredString(x_pt, y_pt, s)
+    else: c.drawString(x_pt, y_pt, s)
+
+def draw_x_in_col(c, sel, ok_x, no_x, na_x, y_mm, page_h_pt):
+    if sel == "OK":
+        draw_text(c, "X", ok_x, y_mm-4, page_h_pt, size=9, centered=True)
+    elif sel == "NO":
+        draw_text(c, "X", no_x, y_mm-4, page_h_pt, size=9, centered=True)
+    elif sel == "N/A":
+        draw_text(c, "X", na_x, y_mm-4, page_h_pt, size=9, centered=True)
+
+st.title("Pauta Mantención — salida PDF igual a la plantilla (Landscape)")
+
+c1, c2 = st.columns(2)
+with c1:
+    marca = st.text_input("MARCA")
+    modelo = st.text_input("MODELO")
+    sn = st.text_input("S/N")
+with c2:
+    n_inv = st.text_input("N/INVENTARIO")
+    ubic = st.text_input("UBICACIÓN")
+    fecha = st.date_input("FECHA", value=datetime.date.today())
+
+def block(title, items):
+    st.subheader(title)
     outs = []
     for it in items:
-        a, b = st.columns([5, 3])
-        with a:
-            st.write(it)
-        with b:
-            sel = st.radio(" ", ["OK", "NO", "N/A"], horizontal=True, key=f"{title}-{it}")
-        outs.append((it, sel))
+        a,b = st.columns([5,3])
+        with a: st.write(it)
+        with b: outs.append(st.radio(" ", ["OK","NO","N/A"], horizontal=True, key=f"{title}-{it}"))
     return outs
 
-# =============== Dibujo de tabla de checks en PDF ===============
-def checks_pdf(pdf, title, items, x_text, y_start, w_text, w_col, row_h, font_size=7.5):
-    pdf.set_xy(x_text, y_start - 5)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(0, 4.5, title, ln=1)
-    # Cabecera columnas OK/NO/N/A alineadas a la derecha del texto
-    pdf.set_xy(x_text, pdf.get_y())
-    pdf.set_font("Arial", "B", font_size)
-    pdf.cell(w_text, 5, "", 0, 0)
-    pdf.cell(w_col, 5, "OK", 1, 0, "C")
-    pdf.cell(w_col, 5, "NO", 1, 0, "C")
-    pdf.cell(w_col, 5, "N/A", 1, 1, "C")
+items1 = ["1.1. Carcasa Frontal y Trasera","1.2. Estado de Software","1.3. Panel frontal","1.4. Batería de respaldo"]
+items2 = ["2.1. Chequeo de yugo de O2, N2O, Aire","2.2. Revisión o reemplazo de empaquetadura de yugo","2.3. Verificación de entrada de presión","2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"]
+items3 = ["3.1. Revisión y calibración de válvula de flujómetro de N2O","3.2. Revisión y calibración de válvula de flujometro de O2","3.3. Revisión y calibración de válvula de flujometro de Aire","3.4. Chequeo de fugas","3.5. Verificación de flujos","3.6. Verificación de regulador de 2da etapa","3.7. Revisión de sistema de corte N2O/Aire por falta de O2","3.8. Revisión de sistema proporción de O2/N2O","3.9. Revisión de manifold de vaporizadores"]
+items4 = ["4.1. Revisión o reemplazo de empaquetadura de canister","4.2. Revisión de válvula APL","4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)","4.4. Revisión de válvula inhalatoria","4.5. Revisión de válvula exhalatoria","4.6. Chequeo de fugas","4.7. Hermeticidad"]
+items5 = ["5.1. Porcentaje de oxigeno","5.2. Volumen corriente y volumen minuto","5.3. Presión de vía aérea","5.4. Frecuencia respiratoria","5.5. Modo ventilatorio","5.6. Alarmas","5.7. Calibración de celda de oxígeno a 21% y al 100%","5.8. Calibración de sensores de flujo"]
+items6 = ["6.1. Corriente de fuga","6.2. Tierra de protección","6.3. Aislación"]
 
-    pdf.set_font("Arial", "", font_size)
-    for item, val in items:
-        pdf.set_x(x_text)
-        pdf.cell(w_text, row_h, item, 1, 0)
-        pdf.cell(w_col, row_h, "X" if val == "OK" else "", 1, 0, "C")
-        pdf.cell(w_col, row_h, "X" if val == "NO" else "", 1, 0, "C")
-        pdf.cell(w_col, row_h, "X" if val == "N/A" else "", 1, 1, "C")
+res1 = block("1. Chequeo Visual", items1)
+res2 = block("2. Sistema de Alta Presión", items2)
+res3 = block("3. Sistema de baja presión", items3)
+res4 = block("4. Sistema absorbedor", items4)
+res5 = block("5. Ventilador mecánico", items5)
+res6 = block("6. Seguridad eléctrica", items6)
 
-# =============== APP ===============
-def main():
-    st.title("Pauta Mantención Máquina de Anestesia — Formato V2 (Horizontal)")
+st.subheader("7. Instrumentos de análisis")
+cA,cB = st.columns(2)
+with cA:
+    eq1 = st.text_input("EQUIPO (1)")
+    ma1 = st.text_input("MARCA (1)")
+    mo1 = st.text_input("MODELO (1)")
+    se1 = st.text_input("NÚMERO SERIE (1)")
+with cB:
+    eq2 = st.text_input("EQUIPO (2)")
+    ma2 = st.text_input("MARCA (2)")
+    mo2 = st.text_input("MODELO (2)")
+    se2 = st.text_input("NÚMERO SERIE (2)")
 
-    # Cabecera (mismo orden que la plantilla)
-    c1, c2 = st.columns(2)
-    with c1:
-        marca = st.text_input("MARCA")
-        modelo = st.text_input("MODELO")
-        sn = st.text_input("S/N")
-    with c2:
-        n_inv = st.text_input("N/INVENTARIO")
-        ubic = st.text_input("UBICACIÓN")
-        fecha = st.date_input("FECHA", value=datetime.date.today())
+obs = st.text_area("Observaciones", height=90)
+op = st.radio("¿Equipo operativo?", ["SI","NO"], horizontal=True)
 
-    # Secciones
-    sec1 = block_streamlit("1. Chequeo Visual", [
-        "1.1. Carcasa Frontal y Trasera",
-        "1.2. Estado de Software",
-        "1.3. Panel frontal",
-        "1.4. Batería de respaldo",
-    ])
-    sec2 = block_streamlit("2. Sistema de Alta Presión", [
-        "2.1. Chequeo de yugo de O2, N2O, Aire",
-        "2.2. Revisión o reemplazo de empaquetadura de yugo",
-        "2.3. Verificación de entrada de presión",
-        "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire",
-    ])
-    sec3 = block_streamlit("3. Sistema de baja presión", [
-        "3.1. Revisión y calibración de válvula de flujómetro de N2O",
-        "3.2. Revisión y calibración de válvula de flujometro de O2",
-        "3.3. Revisión y calibración de válvula de flujometro de Aire",
-        "3.4. Chequeo de fugas",
-        "3.5. Verificación de flujos",
-        "3.6. Verificación de regulador de 2da (segunda) etapa",
-        "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
-        "3.8. Revisión de sistema proporción de O2/N2O",
-        "3.9. Revisión de manifold de vaporizadores",
-    ])
-    sec4 = block_streamlit("4. Sistema absorbedor", [
-        "4.1. Revisión o reemplazo de empaquetadura de canister",
-        "4.2. Revisión de válvula APL",
-        "4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)",
-        "4.4. Revisión de válvula inhalatoria",
-        "4.5. Revisión de válvula exhalatoria",
-        "4.6. Chequeo de fugas",
-        "4.7. Hermeticidad",
-    ])
-    sec5 = block_streamlit("5. Ventilador mecánico", [
-        "5.1. Porcentaje de oxigeno",
-        "5.2. Volumen corriente y volumen minuto",
-        "5.3. Presión de vía aérea",
-        "5.4. Frecuencia respiratoria",
-        "5.5. Modo ventilatorio",
-        "5.6. Alarmas",
-        "5.7. Calibración de celda de oxígeno a 21% y al 100%",
-        "5.8. Calibración de sensores de flujo",
-    ])
-    sec6 = block_streamlit("6. Seguridad eléctrica", [
-        "6.1. Corriente de fuga",
-        "6.2. Tierra de protección",
-        "6.3. Aislación",
-    ])
+cT1,cT2 = st.columns([2,1])
+with cT1:
+    tecnico = st.text_input("NOMBRE TÉCNICO/INGENIERO")
+    empresa = st.text_input("EMPRESA RESPONSABLE")
+with cT2:
+    st.caption("FIRMA TÉCNICO/INGENIERO")
+    firma_tec = st_canvas(fill_color="rgba(0,0,0,0)", stroke_width=2, stroke_color="#000", background_color="#fff", height=110, width=260, drawing_mode="freedraw", key="firma_tec")
 
-    # 7. Instrumentos de análisis (dos bloques)
-    st.markdown("### 7. Instrumentos de análisis")
-    cA, cB = st.columns(2)
-    with cA:
-        eq1 = st.text_input("EQUIPO (1)")
-        ma1 = st.text_input("MARCA (1)")
-        mo1 = st.text_input("MODELO (1)")
-        se1 = st.text_input("NÚMERO SERIE (1)")
-    with cB:
-        eq2 = st.text_input("EQUIPO (2)")
-        ma2 = st.text_input("MARCA (2)")
-        mo2 = st.text_input("MODELO (2)")
-        se2 = st.text_input("NÚMERO SERIE (2)")
+obs_int = st.text_area("Observaciones (uso interno)", height=90)
 
-    st.markdown("### Observaciones")
-    obs = st.text_area("Observaciones", height=120)
+st.subheader("Recepción conforme")
+cR1,cR2 = st.columns(2)
+with cR1:
+    st.write("PERSONAL INGENIERÍA CLÍNICA")
+    firma_ing = st_canvas(fill_color="rgba(0,0,0,0)", stroke_width=2, stroke_color="#000", background_color="#fff", height=95, width=240, drawing_mode="freedraw", key="firma_ing")
+with cR2:
+    st.write("PERSONAL CLÍNICO")
+    firma_cli = st_canvas(fill_color="rgba(0,0,0,0)", stroke_width=2, stroke_color="#000", background_color="#fff", height=95, width=240, drawing_mode="freedraw", key="firma_cli")
 
-    op = st.radio("¿Equipo operativo?", ["SI", "NO"], horizontal=True)
+def build_overlay(template_path="MAQ ANESTESIA_V2.pdf"):
+    reader = PdfReader(template_path)
+    page = reader.pages[0]
+    W = float(page.mediabox.width)
+    H = float(page.mediabox.height)
 
-    cT1, cT2 = st.columns([2, 1])
-    with cT1:
-        tecnico = st.text_input("NOMBRE TÉCNICO/INGENIERO")
-        empresa = st.text_input("EMPRESA RESPONSABLE")
-    with cT2:
-        st.markdown("**FIRMA TÉCNICO/INGENIERO**")
-        firma_tec = st_canvas(
-            fill_color="rgba(255,255,255,0)", stroke_width=2, stroke_color="#000000",
-            background_color="#FFFFFF", height=120, width=300, drawing_mode="freedraw",
-            key="firma_tec"
-        )
+    buf = io.BytesIO()
+    c = rl_canvas.Canvas(buf, pagesize=(W, H))
 
-    st.markdown("### Observaciones (uso interno)")
-    obs_int = st.text_area("Observaciones (uso interno)", height=110)
+    xL, xR, row = CFG["cab"]["xL"], CFG["cab"]["xR"], CFG["cab"]["row"]
+    y0 = 30
+    draw_text(c, f"MARCA  : {marca}", xL, y0, H, size=9)
+    draw_text(c, f"FECHA : {fecha.strftime('%d/%m/%Y')}", xR, y0, H, size=9)
+    draw_text(c, f"MODELO : {modelo}", xL, y0+row, H, size=9)
+    draw_text(c, f"S/N : {sn}", xR, y0+row, H, size=9)
+    draw_text(c, f"N/INVENTARIO : {n_inv}", xL, y0+2*row, H, size=9)
+    draw_text(c, f"UBICACIÓN : {ubic}", xR, y0+2*row, H, size=9)
 
-    st.markdown("### Recepción conforme")
-    cR1, cR2 = st.columns(2)
-    with cR1:
-        st.write("**PERSONAL INGENIERÍA CLÍNICA**")
-        firma_ing = st_canvas(
-            fill_color="rgba(255,255,255,0)", stroke_width=2, stroke_color="#000000",
-            background_color="#FFFFFF", height=110, width=280, drawing_mode="freedraw",
-            key="firma_ing"
-        )
-    with cR2:
-        st.write("**PERSONAL CLÍNICO**")
-        firma_cli = st_canvas(
-            fill_color="rgba(255,255,255,0)", stroke_width=2, stroke_color="#000000",
-            background_color="#FFFFFF", height=110, width=280, drawing_mode="freedraw",
-            key="firma_cli"
-        )
+    def paint_section(items_sel, side, y_from_top):
+        col = CFG["tbl_left"] if side=="L" else CFG["tbl_right"]
+        y = y_from_top
+        for sel in items_sel:
+            s = sel[1] if isinstance(sel, tuple) else sel
+            draw_x_in_col(c, s, col["ok"], col["no"], col["na"], y, H)
+            y += col["row"]
 
-    if st.button("Generar PDF (Horizontal)"):
-        # --------- PDF A4 Landscape ----------
-        pdf = FPDF('L', 'mm', 'A4')  # Horizontal
-        pdf.set_auto_page_break(auto=True, margin=10)
-        pdf.add_page()
-        pdf.set_margins(10, 8, 10)
+    paint_section(res1, "L", CFG["y"]["sec1"])
+    paint_section(res2, "L", CFG["y"]["sec2"])
+    paint_section(res3, "L", CFG["y"]["sec3"])
+    paint_section(res4, "L", CFG["y"]["sec4"])
+    paint_section([s for s in res5[:6]], "R", CFG["y"]["sec5a"])
+    paint_section([s for s in res5[6:]], "R", CFG["y"]["sec5b"])
+    paint_section(res6, "R", CFG["y"]["sec6"])
 
-        # Encabezado (imitando la pauta)
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 6, "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)", ln=1, align="C")
-        pdf.set_font("Arial", "", 10)
-        pdf.cell(0, 5, "UNIDAD DE INGENIERÍA CLÍNICA", ln=1, align="C")
-        pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 5, "HOSPITAL REGIONAL DE TALCA", ln=1, align="C")
-        pdf.ln(2)
+    ia_y = CFG["y"]["ia"]
+    draw_text(c, f"EQUIPO  : {eq1}", 190, ia_y, H, size=9)
+    draw_text(c, f"MARCA   : {ma1}", 190, ia_y+7, H, size=9)
+    draw_text(c, f"MODELO  : {mo1}", 190, ia_y+14, H, size=9)
+    draw_text(c, f"NUMERO SERIE : {se1}", 190, ia_y+21, H, size=9)
 
-        # Bloque de cabecera en dos columnas (coordenadas pensadas para landscape)
-        pdf.set_font("Arial", "", 9)
-        col_w = 140
-        row_h = 6.5
-        pdf.cell(col_w, row_h, f"MARCA  : {marca}", 0, 0)
-        pdf.cell(col_w, row_h, f"FECHA : {fecha.strftime('%d/%m/%Y')}", 0, 1)
-        pdf.cell(col_w, row_h, f"MODELO : {modelo}", 0, 0)
-        pdf.cell(col_w, row_h, f"S/N : {sn}", 0, 1)
-        pdf.cell(col_w, row_h, f"N/INVENTARIO : {n_inv}", 0, 0)
-        pdf.cell(col_w, row_h, f"UBICACIÓN : {ubic}", 0, 1)
-        pdf.ln(2)
+    draw_text(c, f"EQUIPO  : {eq2}", 255, ia_y, H, size=9)
+    draw_text(c, f"MARCA   : {ma2}", 255, ia_y+7, H, size=9)
+    draw_text(c, f"MODELO  : {mo2}", 255, ia_y+14, H, size=9)
+    draw_text(c, f"NUMERO SERIE : {se2}", 255, ia_y+21, H, size=9)
 
-        # Coordenadas base para tablas (landscape)
-        x_left = 12
-        x_right = 165
-        w_text = 118
-        w_col = 16
-        row_h_chk = 6
+    for i, line in enumerate((obs or "").splitlines()[:6]):
+        draw_text(c, line, 190, CFG["y"]["obs"] + i*6, H, size=9)
 
-        # Secciones izquierda
-        pdf.set_xy(x_left, pdf.get_y())
-        checks_pdf(pdf, "1. Chequeo Visual", sec1, x_left, pdf.get_y(), w_text, w_col, row_h_chk)
-        checks_pdf(pdf, "2. Sistema de Alta Presión", sec2, x_left, pdf.get_y(), w_text, w_col, row_h_chk)
-        checks_pdf(pdf, "3. Sistema de baja presión", sec3, x_left, pdf.get_y(), w_text, w_col, row_h_chk)
-        checks_pdf(pdf, "4. Sistema absorbedor", sec4, x_left, pdf.get_y(), w_text, w_col, row_h_chk)
+    si = "X" if op=="SI" else " "
+    no = "X" if op=="NO" else " "
+    draw_text(c, f"EQUIPO OPERATIVO   SI [ {si} ]    NO [ {no} ]", 190, CFG["y"]["op"], H, size=9)
 
-        # Secciones derecha
-        start_y_right = 60  # altura aproximada para que calce visualmente
-        pdf.set_xy(x_right, start_y_right)
-        checks_pdf(pdf, "5. Ventilador mecánico", sec5, x_right, start_y_right, w_text, w_col, row_h_chk)
-        checks_pdf(pdf, "6. Seguridad eléctrica", sec6, x_right, pdf.get_y(), w_text, w_col, row_h_chk)
+    draw_text(c, f"NOMBRE TÉCNICO/INGENIERO  : {tecnico}", 190, CFG["y"]["tec"], H, size=9)
+    xF, yF, wF, hF = CFG["y"]["firmaTecBox"]
+    draw_img_centered(c, recortar_firma(firma_tec), xF, yF, wF, hF, H)
 
-        # 7. Instrumentos de análisis (dos bloques lado derecho)
-        pdf.set_x(x_right)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "7. Instrumentos de análisis", ln=1)
-        pdf.set_font("Arial", "", 9)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"EQUIPO  : {eq1}", ln=1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"MARCA   : {ma1}", ln=1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"MODELO  : {mo1}", ln=1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"NUMERO SERIE : {se1}", ln=1)
-        pdf.ln(1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"EQUIPO  : {eq2}", ln=1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"MARCA   : {ma2}", ln=1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"MODELO  : {mo2}", ln=1)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"NUMERO SERIE : {se2}", ln=1)
-        pdf.ln(2)
+    draw_text(c, f"EMPRESA RESPONSABLE : {empresa}", 190, CFG["y"]["emp"], H, size=9)
 
-        # Observaciones (columna derecha inferior)
-        pdf.set_x(x_right)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "Observaciones", ln=1)
-        pdf.set_font("Arial", "", 9)
-        pdf.set_x(x_right)
-        pdf.multi_cell(120, 5, obs or "")
-        pdf.ln(1)
+    for i, line in enumerate((obs_int or "").splitlines()[:4]):
+        draw_text(c, line, 20, CFG["y"]["obs_int"] + i*6, H, size=9)
 
-        # Operativo SI/NO
-        pdf.set_x(x_right)
-        si = "X" if op == "SI" else ""
-        no = "X" if op == "NO" else ""
-        pdf.cell(0, 5, f"EQUIPO OPERATIVO   SI [ {si} ]    NO [ {no} ]", ln=1)
+    x1,y1,w1,h1 = CFG["y"]["rc_left"]
+    x2,y2,w2,h2 = CFG["y"]["rc_right"]
+    draw_img_centered(c, recortar_firma(firma_ing), x1, y1, w1, h1, H)
+    draw_img_centered(c, recortar_firma(firma_cli), x2, y2, w2, h2, H)
 
-        # Técnico + Firma (firma a la derecha dentro de cajita)
-        pdf.set_x(x_right)
-        pdf.cell(0, 5, f"NOMBRE TÉCNICO/INGENIERO  : {tecnico}", ln=1)
-        y_fbox = pdf.get_y()
-        pdf.set_x(x_right + 70)
-        pdf.set_font("Arial", "I", 8)
-        pdf.cell(0, 5, "FIRMA:", ln=1)
-        # caja de firma
-        box_x = x_right + 70
-        box_y = y_fbox + 4
-        box_w = 45
-        box_h = 18
-        pdf.rect(box_x, box_y, box_w, box_h)
+    c.showPage(); c.save(); buf.seek(0)
+    return buf
 
-        # Empresa responsable
-        pdf.set_x(x_right)
-        pdf.set_y(box_y + box_h + 4)
-        pdf.set_font("Arial", "", 9)
-        pdf.cell(0, 5, f"EMPRESA RESPONSABLE : {empresa}", ln=1)
+def merge_with_template(overlay_bytes, template_path="MAQ ANESTESIA_V2.pdf"):
+    base_reader = PdfReader(template_path)
+    base_page = base_reader.pages[0]
+    ov_reader = PdfReader(overlay_bytes)
+    ov_page = ov_reader.pages[0]
+    merged = PageObject.create_blank_page(width=base_page.mediabox.width, height=base_page.mediabox.height)
+    merged.merge_page(base_page); merged.merge_page(ov_page)
+    writer = PdfWriter(); writer.add_page(merged)
+    out = io.BytesIO(); writer.write(out); out.seek(0)
+    return out
 
-        # Observaciones (uso interno) — a todo el ancho final
-        pdf.ln(2)
-        pdf.set_x(12)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, "Observaciones (uso interno)", ln=1)
-        pdf.set_font("Arial", "", 9)
-        pdf.multi_cell(270, 5, obs_int or "")
-
-        # Recepción conforme — dos líneas, espacio de firma centrado
-        pdf.ln(3)
-        y_rc = pdf.get_y()
-        pdf.set_x(30)
-        pdf.cell(100, 5, "____________________________________", 0, 0, "C")
-        pdf.set_x(170)
-        pdf.cell(100, 5, "____________________________________", 0, 1, "C")
-
-        pdf.set_x(30)
-        pdf.cell(100, 5, "RECEPCIÓN CONFORME", 0, 0, "C")
-        pdf.set_x(170)
-        pdf.cell(100, 5, "RECEPCIÓN CONFORME", 0, 1, "C")
-        pdf.set_x(30)
-        pdf.cell(100, 5, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, "C")
-        pdf.set_x(170)
-        pdf.cell(100, 5, "PERSONAL CLÍNICO", 0, 1, "C")
-
-        # Insertar firmas (centradas sobre las líneas)
-        # Firma técnico (en la cajita)
-        tmp_tec, size_tec = recortar_firma(firma_tec)
-        dibujar_firma_centrada(pdf, tmp_tec, size_tec, box_x, box_y, box_w, box_h)
-
-        # Firmas de recepción
-        tmp_ing, size_ing = recortar_firma(firma_ing)
-        tmp_cli, size_cli = recortar_firma(firma_cli)
-        # cajas virtuales para centrar sobre las líneas
-        dibujar_firma_centrada(pdf, tmp_ing, size_ing, 30, y_rc - 6, 100, 20)
-        dibujar_firma_centrada(pdf, tmp_cli, size_cli, 170, y_rc - 6, 100, 20)
-
-        # Descargar
-        out = io.BytesIO(pdf.output(dest="S").encode("latin1"))
-        st.download_button(
-            "Descargar PDF (V2 Horizontal)",
-            out.getvalue(),
-            file_name=f"MP_Anestesia_V2_{sn or 'sin_serie'}.pdf",
-            mime="application/pdf",
-        )
-
-if __name__ == "__main__":
-    main()
+if st.button("Generar PDF (idéntico a plantilla, Horizontal)"):
+    overlay = build_overlay("MAQ ANESTESIA_V2.pdf")
+    final_pdf = merge_with_template(overlay, "MAQ ANESTESIA_V2.pdf")
+    st.download_button(
+        "Descargar PDF (V2 — igual a plantilla)",
+        data=final_pdf.getvalue(),
+        file_name=f"MP_Anestesia_V2_{(st.session_state.get('sn') or 'sin_serie')}.pdf",
+        mime="application/pdf"
+    )
