@@ -222,8 +222,9 @@ def main():
         pdf.add_page()
 
         # ======= ENCABEZADO =======
+        # Logo (lo dejamos "así" como pediste)
         logo_x, logo_y = 2, 2
-        desired_logo_w = 58   # logo grande, como acordamos
+        desired_logo_w = 58
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
@@ -240,68 +241,71 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris: letra más pequeña y un poco más abajo del borde
-        pdf.set_font("Arial", "B", 8)   # ↓ bajamos tamaño de letra
+        # Franja gris: debe llegar HASTA el margen derecho de la 1ª columna (x = 160)
+        first_col_left = 22
+        first_col_right = 160  # <- margen de la primera columna
+        pdf.set_font("Arial", "B", 8)
         text_w = pdf.get_string_width(title_text)
         pad = 6
         cell_w = text_w + pad
-        title_h = 6                  # acorde al tamaño 8pt
 
         title_x = logo_x + desired_logo_w + sep
-        top_offset = 18              # deja la franja más abajo del borde
+        top_offset = 18
         title_y = max(logo_y + 2, top_offset)
 
-        page_w = pdf.w
-        available_w = page_w - title_x - 4
-        if cell_w > available_w:
-            cell_w = available_w
+        # Limitar ancho para que termine EXACTO en x = 160
+        max_w_by_column = max(10, first_col_right - title_x)  # al menos 10mm
+        cell_w = min(cell_w, max_w_by_column)
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
+        title_h = 6
         pdf.set_xy(title_x, title_y)
         pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
-        # Punto más bajo del encabezado (para no solapar)
+        # Fondo del encabezado
         header_bottom = max(logo_y + logo_h, title_y + title_h)
 
-        # ======= INICIO DE CONTENIDO MÁS ARRIBA =======
-        # Bajamos el margen de seguridad para que comience antes
-        content_y_base = header_bottom + 2   # antes era +8 → ahora +2
+        # ======= INICIO DE CONTENIDO (Marca/Modelo) =======
+        content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
-        # ======= COLUMNA IZQUIERDA (Marca/Modelo más arriba) =======
+        # Columna izquierda
         y_column_start_left = pdf.get_y()
         pdf.set_y(y_column_start_left)
-        pdf.set_x(22)
+        pdf.set_x(first_col_left)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
-        pdf.set_x(22)
+        pdf.set_x(first_col_left)
         pdf.cell(0, 3.5, f"Modelo: {modelo}", 0, 1)
-        pdf.set_x(22)
+        pdf.set_x(first_col_left)
         pdf.cell(0, 3.5, f"Número de Serie: {sn}", 0, 1)
-        pdf.set_x(22)
+        pdf.set_x(first_col_left)
         pdf.cell(0, 3.5, f"Número de Inventario: {inventario}", 0, 1)
-        pdf.set_x(22)
+        pdf.set_x(first_col_left)
         pdf.cell(0, 3.5, f"Ubicación: {ubicacion}", 0, 1)
-        pdf.set_x(22)
+        pdf.set_x(first_col_left)
         pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=22)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=22)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=22)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=22)
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=first_col_left)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=first_col_left)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=first_col_left)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=first_col_left)
 
-        # ======= COLUMNA DERECHA (Punto 5 más arriba) =======
-        # Colocamos el inicio prácticamente pegado al encabezado
-        y_column_start_right = header_bottom + 1  # antes +2 → ahora +1
+        # ======= COLUMNA DERECHA =======
+        # SUBIR PUNTO 5 +2 mm respecto a lo anterior (sin solapar el encabezado).
+        # Antes: y = header_bottom + 1 → Ahora: y = header_bottom (sube 1 mm) + 1 mm adicional IMPOSIBLE sin solape.
+        # Usamos el mínimo seguro: justo debajo del encabezado.
+        second_col_left = first_col_right
+        y_column_start_right = header_bottom  # <- lo más arriba posible sin solapar (efecto +2)
         pdf.set_y(y_column_start_right)
 
-        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
-        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=160)
+        create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=second_col_left)
+        create_checkbox_table(pdf, "6. Seguridad eléctrica", seguridad_electrica, x_pos=second_col_left)
 
         # ---------- Instrumentos de análisis ----------
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
 
@@ -311,7 +315,7 @@ def main():
         ):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", "B", 6)
-            pdf.set_x(160)
+            pdf.set_x(second_col_left)
             pdf.cell(34, 3.5, "Equipo", 1, 0, "C", 1)
             pdf.cell(27, 3.5, "Marca", 1, 0, "C", 1)
             pdf.cell(27, 3.5, "Modelo", 1, 0, "C", 1)
@@ -323,7 +327,7 @@ def main():
                 modelo_equipo = equipo_data.get('modelo', '')
                 serie_equipo = equipo_data.get('serie', '')
                 if equipo or marca_equipo or modelo_equipo or serie_equipo:
-                    pdf.set_x(160)
+                    pdf.set_x(second_col_left)
                     pdf.cell(34, 3.5, equipo, 1, 0, "L")
                     pdf.cell(27, 3.5, marca_equipo, 1, 0, "L")
                     pdf.cell(27, 3.5, modelo_equipo, 1, 0, "L")
@@ -331,49 +335,49 @@ def main():
         pdf.ln(2)
 
         # ---------- Observaciones / Técnico ----------
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 3.5, "Observaciones:", ln=True)
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.multi_cell(115, 3.5, f"{observaciones}")
         pdf.ln(1)
         
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 3.5, "Observaciones (uso interno):", ln=True)
         pdf.set_font("Arial", "", 7)
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.multi_cell(115, 3.5, f"{observaciones_interno}")
         pdf.ln(1)
 
         # Equipo Operativo con casillas SI/NO
         y_equipo_op = pdf.get_y()
-        draw_si_no_boxes(pdf, x=160, y=y_equipo_op, selected=operativo, size=4)
+        draw_si_no_boxes(pdf, x=second_col_left, y=y_equipo_op, selected=operativo, size=4)
         pdf.ln(2)
 
         # Nombre Técnico/Ingeniero con firma a la derecha
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.set_font("Arial", "", 7)
         y_nombre = pdf.get_y()
         name_box_w = 70
         pdf.cell(name_box_w, 5, f"Nombre Técnico/Ingeniero: {tecnico}", 0, 0, "L")
         sig_w, sig_h = 40, 12
-        x_sig = 160 + name_box_w + 5
+        x_sig = second_col_left + name_box_w + 5
         y_sig = y_nombre
         add_signature_in_box(pdf, canvas_result_tecnico, x=x_sig, y=y_sig, w_mm=sig_w, h_mm=sig_h, draw_border=True)
         pdf.set_y(y_sig + sig_h + 2)
 
         # Empresa
-        pdf.set_x(160)
+        pdf.set_x(second_col_left)
         pdf.cell(0, 3.5, f"Empresa Responsable: {empresa}", 0, 1)
         
         # ---------- FIRMAS finales (2) ----------
         pdf.ln(5) 
         ancho_area = 117
         ancho_caja = 50
-        x_izq = 160 + (ancho_area/4) - (ancho_caja/2)
-        x_der = 160 + (3*ancho_area/4) - (ancho_caja/2)
+        x_izq = second_col_left + (ancho_area/4) - (ancho_caja/2)
+        x_der = second_col_left + (3*ancho_area/4) - (ancho_caja/2)
         y_firma_start = pdf.get_y()
         y_firma_image = y_firma_start + 5
         add_signature_to_pdf(pdf, canvas_result_ingenieria, x_izq, y_firma_image)
