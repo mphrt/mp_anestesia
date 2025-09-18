@@ -114,26 +114,6 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     pdf.rect(x, y_body, w, content_h)
     pdf.set_y(y_body + content_h)
 
-# --- NUEVO: línea partida con texto centrado ---
-def split_line_with_center_text(pdf, x_left, y, total_w, text, fs=7.5, pad=2.0):
-    """Dibuja una línea horizontal 'partida' dejando un gap central para el texto."""
-    pdf.set_font("Arial", "B", fs)
-    txt_w = pdf.get_string_width(text)
-    gap_w = min(total_w - 6, txt_w + 2*pad)  # deja margen lateral al texto
-    left_end = x_left + (total_w - gap_w) / 2.0
-    right_start = left_end + gap_w
-
-    # segmentos de línea
-    pdf.set_draw_color(0, 0, 0)
-    pdf.line(x_left, y, left_end, y)
-    pdf.line(right_start, y, x_left + total_w, y)
-
-    # texto centrado dentro del gap
-    x_text = x_left + (total_w - txt_w) / 2.0
-    y_text = y - fs * 0.65  # coloca el texto "dentro" del gap
-    pdf.set_xy(x_text, y_text)
-    pdf.cell(txt_w, fs, text, 0, 0, 'C')
-
 # ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
@@ -466,7 +446,7 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción: línea PARTIDA con texto al centro ----------
+        # ---------- Firmas de recepción: línea continua + texto en dos líneas debajo ----------
         ancho_area = col_total_w
         center_left  = SECOND_COL_LEFT + (ancho_area * 0.50)
         center_right = SECOND_COL_LEFT + (ancho_area * 1)
@@ -474,7 +454,6 @@ def main():
         sig_recep_w = 65
         sig_recep_h = 20
 
-        # calcular anchos de "ancla" (bloque) con margen
         pdf.set_font("Arial", "B", 7.5)
         w_rc = pdf.get_string_width("RECEPCIÓN CONFORME")
         w_pi = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
@@ -487,7 +466,7 @@ def main():
         x_block_right = center_right - block_w_right/2.0
 
         y_top = pdf.get_y()
-        y_sig = y_top + 2.0
+        y_sig = y_top + 2.0  # firmas arriba de la línea
 
         # Firmas centradas
         add_signature_inline(pdf, canvas_result_ingenieria,
@@ -497,23 +476,24 @@ def main():
                              x=center_right - sig_recep_w/2.0, y=y_sig,
                              w_mm=sig_recep_w, h_mm=sig_recep_h)
 
-        # Línea (partida) + texto “RECEPCIÓN CONFORME” en el centro
+        # Línea continua bajo las firmas
         y_line = y_sig + sig_recep_h + 3.0
-        split_line_with_center_text(pdf, x_block_left,  y_line, block_w_left,  "RECEPCIÓN CONFORME", fs=7.5, pad=2.0)
-        split_line_with_center_text(pdf, x_block_right, y_line, block_w_right, "RECEPCIÓN CONFORME", fs=7.5, pad=2.0)
+        pdf.set_draw_color(0, 0, 0)
+        pdf.line(x_block_left,  y_line, x_block_left  + block_w_left,  y_line)
+        pdf.line(x_block_right, y_line, x_block_right + block_w_right, y_line)
 
-        # Segunda línea (debajo) continua + textos inferiores
-        y_line2 = y_line + 1.8
-        pdf.line(x_block_left,  y_line2, x_block_left  + block_w_left,  y_line2)
-        pdf.line(x_block_right, y_line2, x_block_right + block_w_right, y_line2)
+        # Textos en dos líneas, alineación a la izquierda (como el ejemplo)
+        pdf.set_xy(x_block_left,  y_line + 0.8)
+        pdf.cell(block_w_left, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'L')
+        pdf.set_xy(x_block_left,  pdf.get_y())
+        pdf.cell(block_w_left, 3.6, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'L')
 
-        pdf.set_font("Arial", "B", 7.5)
-        pdf.set_xy(x_block_left,  y_line2 + 0.8)
-        pdf.cell(block_w_left, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_xy(x_block_right, y_line2 + 0.8)
-        pdf.cell(block_w_right, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
+        pdf.set_xy(x_block_right, y_line + 0.8)
+        pdf.cell(block_w_right, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'L')
+        pdf.set_xy(x_block_right, pdf.get_y())
+        pdf.cell(block_w_right, 3.6, "PERSONAL CLÍNICO", 0, 0, 'L')
 
-        pdf.set_y(max(y_line2 + 7, pdf.get_y()))
+        pdf.set_y(max(y_line + 7, pdf.get_y()))
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(),
