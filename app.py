@@ -59,11 +59,10 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
     pdf.set_xy(x_box_no, y); pdf.cell(size, size, "X" if selected == "NO" else "", 0, 0, "C")
     pdf.set_xy(x_box_no + size + text_gap, y); pdf.cell(6, size, "NO", 0, 1)
 
-# Cabecera + filas (título gris con OK/NO/N/A; filas sin bordes en texto)
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
-    # Cabecera
+    # Cabecera gris con bordes en OK/NO/N/A
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -74,7 +73,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
-    # Filas
+    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -85,7 +84,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.6)
 
-# Solo filas (para 5.7–5.8; mismo interlineado que subtítulos)
 def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, indent_w=5.0):
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
@@ -98,10 +96,12 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
     pdf.ln(1.4)
 
 def draw_boxed_text(pdf, x, y, w, min_h, title, text, head_h=4.8, fs=7.5, body_line_h=3.6):
+    # Encabezado
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs)
     pdf.cell(w, head_h, title, border=1, ln=1, align="L", fill=True)
+    # Cuerpo
     y_body = y + head_h
     pdf.rect(x, y_body, w, min_h)
     pdf.set_xy(x + 1.2, y_body + 1.2)
@@ -262,7 +262,7 @@ def main():
         except Exception:
             st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
-        pdf.set_font("Arial", "B", 7)
+        pdf.set_font("Arial", "B", 7)      # título (se mantiene)
         title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
         title_y = (logo_y + logo_h) - title_h
@@ -322,7 +322,6 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # 5.1–5.6 en la primera columna (con tabla)
         vm_izq = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
@@ -335,11 +334,9 @@ def main():
         pdf.set_y(content_y_base)
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 7.5)
-        # Texto entre 5 y 5.1 (sin tabla) – frase solicitada
-        pdf.multi_cell(col_total_w, 3.4, "Verifique que el equipo muestra en pantalla los siguientes parámetros:", border=0)
+        pdf.multi_cell(col_total_w, 3.4, "Verifique que el equipo realiza las siguientes acciones:", border=0)
         pdf.ln(0.4)
 
-        # 5.7–5.8 (se mantienen como estaban, en filas con casillas)
         vm_der = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.7.") or it.startswith("5.8.")]
         if vm_der:
@@ -350,7 +347,7 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=3.4,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # ======= 7. Instrumentos de análisis (fila gris + 2 columnas SIN LÍNEAS) =======
+        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas =======
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
@@ -362,29 +359,30 @@ def main():
         left_x = SECOND_COL_LEFT
         right_x = SECOND_COL_LEFT + col_w + gap_cols
         label_w = 17.0
-        text_w = col_w - label_w - 3.0
-        row_h_field = 3.4  # MISMO interlineado que subtítulos
+        base_line_w = col_w - label_w - 3.0
+        row_h_field = 4.4  # interlineado menor
 
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
-        # Columnas sin líneas (solo espacio para escribir)
-        def draw_column_no_lines(x, y, data):
+        def draw_column(x, y, data):
             pdf.set_font("Arial", "", 7.5)
             yy = y
-            def field(lbl, val=""):
+            def field(lbl, val="", w_override=None):
                 nonlocal yy
+                line_w = base_line_w if w_override is None else w_override
                 pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-                pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
-                yy += row_h_field + 1.0
+                pdf.set_xy(x + label_w + 2, yy); pdf.cell(line_w, row_h_field, (val or ""), border="B", ln=1)
+                yy += row_h_field + 1.0  # menos espacio vertical
             field("EQUIPO",  data.get('equipo', ''))
             field("MARCA",   data.get('marca', ''))
             field("MODELO",  data.get('modelo', ''))
-            field("NÚMERO DE SERIE", data.get('serie', ''))
+            # NÚMERO DE SERIE más corta (75% del largo)
+            field("NÚMERO DE SERIE", data.get('serie', ''), w_override=base_line_w * 0.75)
             return yy
 
-        end_left = draw_column_no_lines(left_x, start_y_7, e0)
-        end_right = draw_column_no_lines(right_x, start_y_7, e1)
+        end_left = draw_column(left_x, start_y_7, e0)
+        end_right = draw_column(right_x, start_y_7, e1)
         pdf.set_y(max(end_left, end_right) + 2)
 
         # ---------- Observaciones (general) ----------
@@ -412,7 +410,7 @@ def main():
         pdf.set_x(SECOND_COL_LEFT)
         pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
 
-        # Extra espacio
+        # Espacio extra entre Empresa y Observaciones (uso interno)
         pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
@@ -437,20 +435,17 @@ def main():
         add_signature_inline(pdf, canvas_result_ingenieria, x=x_sig_izq, y=y_firma_image, w_mm=sig_recep_w, h_mm=sig_recep_h)
         add_signature_inline(pdf, canvas_result_clinico,     x=x_sig_der, y=y_firma_image, w_mm=sig_recep_w, h_mm=sig_recep_h)
 
-        # líneas
         y_lineas = y_firma_start + 24
         pdf.set_y(y_lineas)
         pdf.set_x(x_izq); pdf.cell(ancho_caja, 3.8, "_________________________", 0, 0, 'C')
         pdf.set_x(x_der);  pdf.cell(ancho_caja, 3.8, "_________________________", 0, 1, 'C')
 
-        # etiquetas con una ligera “tabulación” (sangría visual) para centrar mejor
         pdf.set_font("Arial", "B", 7.5)
         label_y = pdf.get_y() - 1
-        tab = "   "  # pequeña tabulación
-        pdf.set_xy(x_izq, label_y);         pdf.cell(ancho_caja, 3.8, f"{tab}RECEPCIÓN CONFORME", 0, 0, 'C')
-        pdf.set_xy(x_izq, label_y + 3.8);   pdf.cell(ancho_caja, 3.8, f"{tab}PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
-        pdf.set_xy(x_der, label_y);         pdf.cell(ancho_caja, 3.8, f"{tab}RECEPCIÓN CONFORME", 0, 0, 'C')
-        pdf.set_xy(x_der, label_y + 3.8);   pdf.cell(ancho_caja, 3.8, f"{tab}PERSONAL CLÍNICO", 0, 0, 'C')
+        pdf.set_xy(x_izq, label_y);     pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_izq, label_y + 3.8); pdf.cell(ancho_caja, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_xy(x_der, label_y);     pdf.cell(ancho_caja, 3.8, "RECEPCIÓN CONFORME", 0, 0, 'C')
+        pdf.set_xy(x_der, label_y + 3.8); pdf.cell(ancho_caja, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
         pdf.set_y(label_y + 9)
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
