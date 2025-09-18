@@ -248,7 +248,7 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Fila gris: letra más chica, ALARGADA hasta la ÚLTIMA COLUMNA de la primera tabla (FIRST_TAB_RIGHT)
+        # Fila gris: letra pequeña, ALARGADA hasta la ÚLTIMA COLUMNA de la primera tabla (FIRST_TAB_RIGHT)
         pdf.set_font("Arial", "B", 7)   # letra pequeña para el rótulo
         title_h = 6
 
@@ -256,7 +256,7 @@ def main():
         top_offset = 18
         title_y = max(logo_y + 2, top_offset)
 
-        # Queremos que el borde derecho del encabezado sea EXACTAMENTE FIRST_TAB_RIGHT
+        # Borde derecho del encabezado = FIRST_TAB_RIGHT
         cell_w = max(10, FIRST_TAB_RIGHT - title_x)
 
         pdf.set_fill_color(230, 230, 230)
@@ -293,9 +293,9 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT)
 
         # ======= COLUMNA DERECHA =======
-        second_col_left = 160  # margen donde inicia la segunda columna, como venías usando
-        # Punto 5: lo estabas colocando bien arriba; mantenemos esa lógica:
-        y_column_start_right = 6.0
+        second_col_left = 160  # margen donde inicia la segunda columna
+        # >>> Ajuste clave: el Punto 5 comienza a la MISMA altura que "Marca/Modelo"
+        y_column_start_right = content_y_base
         pdf.set_y(y_column_start_right)
 
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=second_col_left)
