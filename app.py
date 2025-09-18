@@ -7,6 +7,13 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
+# ===== Parámetros de la tabla izquierda (usados también para el ancho del encabezado) =====
+TABLE_ITEM_W = 85      # ancho de la columna de texto (ítem)
+TABLE_COL_W  = 10      # ancho de cada columna OK/NO/N/A
+TABLE_TOTAL_W = TABLE_ITEM_W + 3 * TABLE_COL_W  # 85 + 10 + 10 + 10 = 115
+FIRST_COL_LEFT = 22    # x de inicio de la primera columna
+FIRST_TAB_RIGHT = FIRST_COL_LEFT + TABLE_TOTAL_W  # borde derecho de la "última columna" de la 1ª tabla
+
 def create_checkbox_table(pdf, section_title, items, x_pos):
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 7)
@@ -14,18 +21,18 @@ def create_checkbox_table(pdf, section_title, items, x_pos):
     
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "", 6)
-    pdf.cell(85, 3.5, "", 0)
-    pdf.cell(10, 3.5, "OK", 1, 0, "C")
-    pdf.cell(10, 3.5, "NO", 1, 0, "C")
-    pdf.cell(10, 3.5, "N/A", 1, 1, "C")
+    pdf.cell(TABLE_ITEM_W, 3.5, "", 0)
+    pdf.cell(TABLE_COL_W, 3.5, "OK", 1, 0, "C")
+    pdf.cell(TABLE_COL_W, 3.5, "NO", 1, 0, "C")
+    pdf.cell(TABLE_COL_W, 3.5, "N/A", 1, 1, "C")
     
     pdf.set_font("Arial", "", 6)
     for item, value in items:
         pdf.set_x(x_pos)
-        pdf.cell(85, 3.5, item, 1, 0)
-        pdf.cell(10, 3.5, "X" if value == "OK" else "", 1, 0, "C")
-        pdf.cell(10, 3.5, "X" if value == "NO" else "", 1, 0, "C")
-        pdf.cell(10, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
+        pdf.cell(TABLE_ITEM_W, 3.5, item, 1, 0)
+        pdf.cell(TABLE_COL_W, 3.5, "X" if value == "OK" else "", 1, 0, "C")
+        pdf.cell(TABLE_COL_W, 3.5, "X" if value == "NO" else "", 1, 0, "C")
+        pdf.cell(TABLE_COL_W, 3.5, "X" if value == "N/A" else "", 1, 1, "C")
     pdf.ln(2)
 
 def _crop_signature(canvas_result):
@@ -223,7 +230,7 @@ def main():
 
         # ======= ENCABEZADO =======
         logo_x, logo_y = 2, 2
-        desired_logo_w = 58
+        desired_logo_w = 58   # mismo tamaño configurado previamente
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
@@ -235,23 +242,22 @@ def main():
         except Exception:
             logo_h = desired_logo_w * 0.8
 
+        # Dibuja el logo
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=desired_logo_w)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Fila gris: letra más chica y ALARGADA hasta el margen de la 1ª columna (x=160)
-        first_col_left = 22
-        first_col_right = 160  # margen de la primera columna
-        pdf.set_font("Arial", "B", 7)  # ↓ letra más pequeña para "PAUTA..."
+        # Fila gris: letra más chica, ALARGADA hasta la ÚLTIMA COLUMNA de la primera tabla (FIRST_TAB_RIGHT)
+        pdf.set_font("Arial", "B", 7)   # letra pequeña para el rótulo
         title_h = 6
 
         title_x = logo_x + desired_logo_w + sep
         top_offset = 18
         title_y = max(logo_y + 2, top_offset)
 
-        # La alargamos EXACTO hasta x = 160
-        cell_w = max(10, first_col_right - title_x)
+        # Queremos que el borde derecho del encabezado sea EXACTAMENTE FIRST_TAB_RIGHT
+        cell_w = max(10, FIRST_TAB_RIGHT - title_x)
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
@@ -266,32 +272,30 @@ def main():
         pdf.set_y(content_y_base)
 
         # Columna izquierda
-        y_column_start_left = pdf.get_y()
-        pdf.set_y(y_column_start_left)
-        pdf.set_x(first_col_left)
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 3.5, f"Marca: {marca}", 0, 1)
-        pdf.set_x(first_col_left)
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, 3.5, f"Modelo: {modelo}", 0, 1)
-        pdf.set_x(first_col_left)
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, 3.5, f"Número de Serie: {sn}", 0, 1)
-        pdf.set_x(first_col_left)
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, 3.5, f"Número de Inventario: {inventario}", 0, 1)
-        pdf.set_x(first_col_left)
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, 3.5, f"Ubicación: {ubicacion}", 0, 1)
-        pdf.set_x(first_col_left)
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(0, 3.5, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(2)
 
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=first_col_left)
-        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=first_col_left)
-        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=first_col_left)
-        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=first_col_left)
+        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT)
+        create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT)
+        create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=FIRST_COL_LEFT)
+        create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT)
 
         # ======= COLUMNA DERECHA =======
-        # Punto 5 ARRIBA del encabezado: comenzamos muy arriba (no hay franja ni logo en x>=160)
-        second_col_left = first_col_right
-        y_column_start_right = 6.0  # ~6 mm desde el borde superior → arriba del encabezado
+        second_col_left = 160  # margen donde inicia la segunda columna, como venías usando
+        # Punto 5: lo estabas colocando bien arriba; mantenemos esa lógica:
+        y_column_start_right = 6.0
         pdf.set_y(y_column_start_right)
 
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=second_col_left)
