@@ -221,43 +221,56 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
 
-        # ========= ENCABEZADO: LOGO pegado a los bordes + Fila gris con ancho según texto =========
-        logo_x, logo_y = 2, 2          # pegado a los bordes
-        logo_w = 36                    # menor tamaño
+        # ======= ENCABEZADO =======
+        # Logo pegado a los bordes, MÁS grande (ajustamos para no chocar con la franja ni el contenido)
+        logo_x, logo_y = 2, 2
+        desired_logo_w = 58   # <-- más grande
+        sep = 4               # separación entre logo y franja de título
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
-        # Calcula altura real del logo para evitar superposiciones
-        logo_h = 0
+        # Calcula altura real del logo
         try:
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
-                logo_h = logo_w * ratio
-            pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=logo_w)
+            logo_h = desired_logo_w * ratio
+        except Exception:
+            logo_h = desired_logo_w * 0.8  # fallback
+
+        # Pinta el logo
+        try:
+            pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=desired_logo_w)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
-            logo_h = logo_w  # fallback aproximado
 
-        # Fila gris a la derecha del logo, ANCHO = largo del texto (con padding)
-        sep = 4  # separación entre logo y fila
-        title_x = logo_x + logo_w + sep
-        title_y = logo_y + 2
-        pdf.set_font("Arial", "B", 9)   # letra más pequeña
-        pdf.set_fill_color(230, 230, 230)
-
+        # Franja gris (más ABAJO del borde)
+        pdf.set_font("Arial", "B", 9)  # letra pequeña
         text_w = pdf.get_string_width(title_text)
-        pad = 6                         # padding horizontal total = 2*pad
+        pad = 6
         cell_w = text_w + pad
-        title_h = 7                     # altura acorde al tamaño de letra
+        title_h = 7
 
+        title_x = logo_x + desired_logo_w + sep
+        # margen superior mayor para que "quede más abajo del borde"
+        top_offset = 16   # <- controla cuánto baja
+        title_y = max(logo_y + 2, top_offset)
+
+        # Ajuste para no salir de página
+        page_w = pdf.w
+        available_w = page_w - title_x - 4
+        if cell_w > available_w:
+            cell_w = available_w  # recorta a lo que cabe
+
+        pdf.set_fill_color(230, 230, 230)
+        pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
-        # Punto de arranque del contenido: debajo del punto más bajo del logo o de la fila
+        # Base de contenido: debajo de lo más bajo entre logo y franja
         header_bottom = max(logo_y + logo_h, title_y + title_h)
         content_y_base = header_bottom + 8
         pdf.set_y(content_y_base)
 
-        # =================== COLUMNA IZQUIERDA ===================
+        # ======= COLUMNA IZQUIERDA =======
         y_column_start_left = pdf.get_y()
         pdf.set_y(y_column_start_left)
         pdf.set_x(22)
@@ -280,9 +293,9 @@ def main():
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=22)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=22)
 
-        # =================== COLUMNA DERECHA ===================
-        # Arranca alineado al comienzo del contenido (sin solapar encabezado).
-        y_column_start_right = content_y_base
+        # ======= COLUMNA DERECHA (SUBIDA) =======
+        # La subimos: empieza inmediatamente debajo del encabezado (lo más alto posible sin tocarlo)
+        y_column_start_right = header_bottom + 2
         pdf.set_y(y_column_start_right)
 
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
