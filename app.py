@@ -88,19 +88,17 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4, gap=4, text_gap=1.5, label_w=3
     pdf.set_xy(x_box_no + size + text_gap, y)
     pdf.cell(6, size, "NO", 0, 1)
 
-# tabla checklists con anchos dinámicos y filas más altas para “alargar” verticalmente
+# tabla checklists con anchos dinámicos
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w, row_h=4.0):
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "B", 7)
-    pdf.cell(0, row_h + 0.0, section_title, ln=True, border=0)
-    
+    pdf.cell(0, row_h, section_title, ln=True, border=0)
     pdf.set_x(x_pos)
     pdf.set_font("Arial", "", 6)
     pdf.cell(item_w, row_h, "", 0)
     pdf.cell(col_w, row_h, "OK", 1, 0, "C")
     pdf.cell(col_w, row_h, "NO", 1, 0, "C")
     pdf.cell(col_w, row_h, "N/A", 1, 1, "C")
-    
     pdf.set_font("Arial", "", 6)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -227,36 +225,32 @@ def main():
                                           key="canvas_clinico")
 
     if st.button("Generar PDF"):
-        # ======= página y márgenes MUY pequeños para ocupar toda la hoja =======
-        PAGE_LM = 3   # mm
-        PAGE_TM = 3   # mm
-        PAGE_RM = 3   # mm
+        # ======= márgenes: izquierda y derecha iguales =======
+        SIDE_MARGIN = 6  # mm (izq = der)
+        TOP_MARGIN  = 4  # mm
 
         pdf = FPDF('L', 'mm', 'A4')
-        pdf.set_margins(PAGE_LM, PAGE_TM, PAGE_RM)
-        pdf.set_auto_page_break(True, margin=PAGE_TM + 2)
+        pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
+        pdf.set_auto_page_break(True, margin=TOP_MARGIN + 2)
         pdf.add_page()
 
         page_w = pdf.w
         page_h = pdf.h
 
-        # ======= cálculo de columnas para USAR TODO EL ANCHO =======
-        FIRST_COL_LEFT = 12  # mm desde el borde izquierdo
-        COL_GAP = 6          # separación mínima entre columnas
-
-        printable_w = page_w - FIRST_COL_LEFT - PAGE_RM
-        col_total_w = (printable_w - COL_GAP) / 2.0  # cada tabla ocupa media página útil
-
-        # Anchos de celdas de checklist
-        COL_W = 12.0                               # ancho de cada columna OK/NO/N/A
+        # ======= columnas (mitades de ancho útil) =======
+        COL_GAP = 6
+        FIRST_COL_LEFT = SIDE_MARGIN
+        usable_w = page_w - 2*SIDE_MARGIN
+        col_total_w = (usable_w - COL_GAP) / 2.0
+        COL_W = 12.0
         ITEM_W = max(60.0, col_total_w - 3 * COL_W)
+        FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
+        SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
-        FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w  # borde derecho de la 1ª tabla
-        SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP     # inicio de la 2ª columna
-
-        # ======= ENCABEZADO (logo + franja gris que termina al borde de la 1ª tabla) =======
+        # ======= ENCABEZADO =======
+        # Logo: (MISMO TAMAÑO que el código pasado)
         logo_x, logo_y = 2, 2
-        desired_logo_w = 48  # ← MISMO tamaño que el código pasado
+        desired_logo_w = 48  # ← se mantiene igual
         sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
@@ -272,12 +266,12 @@ def main():
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris: alineada EXACTO al borde inferior del logo (como en el código pasado)
+        # Franja gris: (MISMO COMPORTAMIENTO) alineada al borde inferior del logo
         pdf.set_font("Arial", "B", 7)
         title_h = 6
         title_x = logo_x + desired_logo_w + sep
-        title_y = logo_y + logo_h            # ← este es el ajuste pedido
-        cell_w = max(10, FIRST_TAB_RIGHT - title_x)
+        title_y = logo_y + logo_h  # ← igual que antes
+        cell_w = max(10, FIRST_TAB_RIGHT - title_x)  # termina en el borde derecho de la 1ª tabla
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
@@ -288,7 +282,7 @@ def main():
         content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
-        # ======= COLUMNA IZQUIERDA (ocupa media página) =======
+        # ======= COLUMNA IZQUIERDA =======
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7)
         pdf.cell(0, 4, f"Marca: {marca}", 0, 1)
@@ -304,7 +298,6 @@ def main():
         pdf.cell(0, 4, f"Fecha: {fecha.strftime('%d/%m/%Y')}", 0, 1)
         pdf.ln(1)
 
-        # Tablas de la primera columna
         create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=4.0)
         create_checkbox_table(pdf, "2. Sistema de Alta Presión", sistema_alta, x_pos=FIRST_COL_LEFT,
@@ -314,7 +307,7 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=4.0)
 
-        # ======= COLUMNA DERECHA (arranca a la misma altura y ocupa media página) =======
+        # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=SECOND_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=4.0)
@@ -326,7 +319,6 @@ def main():
         pdf.set_font("Arial", "B", 7)
         pdf.cell(0, 4, "7. Instrumentos de análisis", ln=True)
 
-        # Repartimos el ancho total de la columna derecha
         col_right_total = col_total_w
         eq_w = round(col_right_total * 0.34, 2)
         other_w = round((col_right_total - eq_w) / 3.0, 2)
@@ -379,7 +371,7 @@ def main():
         draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4, label_w=38)
         pdf.ln(2)
 
-        # Nombre Técnico/Ingeniero con firma a la derecha
+        # Nombre Técnico/Ingeniero + firma
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 7)
         y_nombre = pdf.get_y()
