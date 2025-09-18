@@ -222,55 +222,54 @@ def main():
         pdf.add_page()
 
         # ======= ENCABEZADO =======
-        # Logo pegado a los bordes, MÁS grande (ajustamos para no chocar con la franja ni el contenido)
         logo_x, logo_y = 2, 2
-        desired_logo_w = 58   # <-- más grande
-        sep = 4               # separación entre logo y franja de título
+        desired_logo_w = 58   # logo grande, como acordamos
+        sep = 4
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
-        # Calcula altura real del logo
+        # Altura real del logo
         try:
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
             logo_h = desired_logo_w * ratio
         except Exception:
-            logo_h = desired_logo_w * 0.8  # fallback
+            logo_h = desired_logo_w * 0.8
 
-        # Pinta el logo
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=desired_logo_w)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
 
-        # Franja gris (más ABAJO del borde)
-        pdf.set_font("Arial", "B", 9)  # letra pequeña
+        # Franja gris: letra más pequeña y un poco más abajo del borde
+        pdf.set_font("Arial", "B", 8)   # ↓ bajamos tamaño de letra
         text_w = pdf.get_string_width(title_text)
         pad = 6
         cell_w = text_w + pad
-        title_h = 7
+        title_h = 6                  # acorde al tamaño 8pt
 
         title_x = logo_x + desired_logo_w + sep
-        # margen superior mayor para que "quede más abajo del borde"
-        top_offset = 16   # <- controla cuánto baja
+        top_offset = 18              # deja la franja más abajo del borde
         title_y = max(logo_y + 2, top_offset)
 
-        # Ajuste para no salir de página
         page_w = pdf.w
         available_w = page_w - title_x - 4
         if cell_w > available_w:
-            cell_w = available_w  # recorta a lo que cabe
+            cell_w = available_w
 
         pdf.set_fill_color(230, 230, 230)
         pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y)
         pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
-        # Base de contenido: debajo de lo más bajo entre logo y franja
+        # Punto más bajo del encabezado (para no solapar)
         header_bottom = max(logo_y + logo_h, title_y + title_h)
-        content_y_base = header_bottom + 8
+
+        # ======= INICIO DE CONTENIDO MÁS ARRIBA =======
+        # Bajamos el margen de seguridad para que comience antes
+        content_y_base = header_bottom + 2   # antes era +8 → ahora +2
         pdf.set_y(content_y_base)
 
-        # ======= COLUMNA IZQUIERDA =======
+        # ======= COLUMNA IZQUIERDA (Marca/Modelo más arriba) =======
         y_column_start_left = pdf.get_y()
         pdf.set_y(y_column_start_left)
         pdf.set_x(22)
@@ -293,9 +292,9 @@ def main():
         create_checkbox_table(pdf, "3. Sistema de Baja Presión", sistema_baja, x_pos=22)
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=22)
 
-        # ======= COLUMNA DERECHA (SUBIDA) =======
-        # La subimos: empieza inmediatamente debajo del encabezado (lo más alto posible sin tocarlo)
-        y_column_start_right = header_bottom + 2
+        # ======= COLUMNA DERECHA (Punto 5 más arriba) =======
+        # Colocamos el inicio prácticamente pegado al encabezado
+        y_column_start_right = header_bottom + 1  # antes +2 → ahora +1
         pdf.set_y(y_column_start_right)
 
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
