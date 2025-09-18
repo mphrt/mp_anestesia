@@ -1,25 +1,19 @@
-# app.py
-# -----------------------------------------------------------------------------------
-# MP Anestesia V2 — Salida PDF idéntica a la plantilla (A4 horizontal, 1:1)
-# Requisitos: streamlit, pillow, numpy, streamlit-drawable-canvas, reportlab, pypdf
-# -----------------------------------------------------------------------------------
+# app.py — MP Anestesia V2 (PDF 1:1 en A4 horizontal)
+# deps: streamlit, pillow, numpy, streamlit-drawable-canvas, reportlab, pypdf
 
 import streamlit as st
 import datetime, io, numpy as np
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-
 from pypdf import PdfReader, PdfWriter, PageObject
 from reportlab.pdfgen import canvas as rl_canvas
 from reportlab.lib.utils import ImageReader
 
-# ============================== Base de posiciones (mm) ==============================
-MM = 2.83465  # 1 mm = 2.83465 pt
+MM = 2.83465  # 1 mm en puntos
 
-# ¡Ajustado! Estas coordenadas caen mejor sobre la pauta que mostraste.
+# === Coordenadas base (mm), ya ajustadas a tu pauta ===
 BASE = {
-    # Cabecera (se escribe SOBRE las líneas punteadas de la izquierda y la caja FECHA)
-    "cab": {
+    "cab": {  # escribe sobre líneas punteadas
         "marca":  {"x": 62,  "y": 35},
         "modelo": {"x": 62,  "y": 42},
         "sn":     {"x": 62,  "y": 49},
@@ -27,64 +21,41 @@ BASE = {
         "ubic":   {"x": 62,  "y": 63},
         "fecha":  {"x": 232, "y": 35},
     },
-
-    # Checks izquierda (bloques 1..4). Centros de casillas OK/NO/N/A — AJUSTADOS
-    "checks_left": {
-        "ok": 144, "no": 153, "na": 162,   # ← mueve toda la columna si hiciera falta
+    "checks_left": {       # centros de columnas OK/NO/N/A (lado izq)
+        "ok": 142, "no": 151, "na": 160,   # ← fino
         "row_h": 6.0,
-        "sec1_y":  72,  "sec1_n": 4,   # 1. Chequeo Visual
-        "sec2_y": 104,  "sec2_n": 4,   # 2. Alta Presión
-        "sec3_y": 141,  "sec3_n": 9,   # 3. Baja presión
-        "sec4_y": 192,  "sec4_n": 7,   # 4. Absorbedor
+        "sec1_y":  72, "sec1_n": 4,
+        "sec2_y": 104, "sec2_n": 4,
+        "sec3_y": 141, "sec3_n": 9,
+        "sec4_y": 192, "sec4_n": 7,
     },
-
-    # Checks derecha (bloques 5..6) — AJUSTADOS
-    "checks_right": {
-        "ok": 283, "no": 292, "na": 301,
+    "checks_right": {      # centros de columnas OK/NO/N/A (lado der) — fino
+        "ok": 270, "no": 279, "na": 288,
         "row_h": 6.0,
-        "sec5a_y":  47,  "sec5a_n": 6,  # 5.1..5.6
-        "sec5b_y":  83,  "sec5b_n": 2,  # 5.7..5.8
-        "sec6_y":  106, "sec6_n": 3,    # 6. Seguridad eléctrica
+        "sec5a_y":  47, "sec5a_n": 6,  # 5.1..5.6
+        "sec5b_y":  83, "sec5b_n": 2,  # 5.7..5.8
+        "sec6_y":  106, "sec6_n": 3,
     },
-
-    # 7. Instrumentos de análisis (dos bloques a la derecha) — AJUSTADOS
-    "ia": {
-        "eq1": {"x": 215, "y": 133},
-        "ma1": {"x": 215, "y": 140},
-        "mo1": {"x": 215, "y": 147},
-        "se1": {"x": 215, "y": 154},
-
-        "eq2": {"x": 273, "y": 133},
-        "ma2": {"x": 273, "y": 140},
-        "mo2": {"x": 273, "y": 147},
-        "se2": {"x": 273, "y": 154},
+    "ia": {  # instrumentos (en las líneas)
+        "eq1": {"x": 215, "y": 133}, "ma1": {"x": 215, "y": 140},
+        "mo1": {"x": 215, "y": 147}, "se1": {"x": 215, "y": 154},
+        "eq2": {"x": 273, "y": 133}, "ma2": {"x": 273, "y": 140},
+        "mo2": {"x": 273, "y": 147}, "se2": {"x": 273, "y": 154},
     },
-
-    # Observaciones (caja grande derecha)
     "obs": {"x": 198, "y": 163, "line_h": 5.8, "max_lines": 6},
-
-    # Equipo operativo (línea)
     "operativo": {"x": 198, "y": 179},
-
-    # Técnico + caja de firma (pequeña, a la derecha del nombre)
     "tecnico": {"x": 198, "y": 186},
     "firma_tec_box": {"x": 265, "y": 181, "w": 38, "h": 12},
-
-    # Empresa responsable (línea)
     "empresa": {"x": 198, "y": 194},
-
-    # Observaciones uso interno (caja ancha inferior)
     "obs_int": {"x": 28, "y": 206, "line_h": 5.8, "max_lines": 4},
-
-    # Recepción conforme (dos firmas sobre las líneas)
     "rc_ing": {"x": 70,  "y": 226, "w": 62, "h": 15},
     "rc_cli": {"x": 210, "y": 226, "w": 62, "h": 15},
 }
 
-# Offset vertical fino para centrar la “X” en cada casilla (positivo = baja la X)
-CHECK_Y_OFFSET = 0.8  # mm (fino)
+# Centrado vertical fino de la “X” en la casilla
+CHECK_Y_OFFSET = 0.8  # mm
 
-# ========================= Calibración (sliders opcionales) =========================
+# ======= Calibración rápida desde la UI (opcional) =======
 with st.sidebar:
     st.header("Calibración (mm)")
     glob_dx = st.number_input("ΔX global", -10.0, 10.0, 0.0, 0.5)
@@ -108,29 +79,25 @@ with st.sidebar:
     rc_dx   = st.number_input("ΔX recepción conf.", -5.0, 5.0, 0.0, 0.5)
     rc_dy   = st.number_input("ΔY recepción conf.", -5.0, 5.0, 0.0, 0.5)
 
-def P(x, y, block_dx=0.0, block_dy=0.0):
-    """Aplica offsets globales + de bloque, devuelve (x,y) ajustados en mm."""
-    return x + glob_dx + block_dx, y + glob_dy + block_dy
+def offset(x, y, dx=0.0, dy=0.0):
+    return x + glob_dx + dx, y + glob_dy + dy
 
-# ============================== Utilidades de firmas ==============================
+# ===== Helpers firmas =====
 def recortar_firma(canvas_result):
-    if canvas_result.image_data is None:
-        return None
+    if canvas_result.image_data is None: return None
     arr = canvas_result.image_data.astype(np.uint8)
     img = Image.fromarray(arr).convert("RGB")
     gray = img.convert("L")
     ys, xs = np.where(np.array(gray) < 230)
-    if len(xs) == 0:
-        return None
-    x1, y1, x2, y2 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
-    bio = io.BytesIO()
-    img.crop((x1, y1, x2, y2)).save(bio, format="PNG")
-    bio.seek(0)
-    return bio
+    if len(xs) == 0: return None
+    x1, y1, x2, y2 = xs.min(), ys.min(), xs.max()+1, ys.max()+1
+    out = io.BytesIO()
+    img.crop((x1, y1, x2, y2)).save(out, format="PNG")
+    out.seek(0)
+    return out
 
-# ================================== UI ==================================
-st.title("Pauta Mantención — PDF idéntico a plantilla (A4 horizontal)")
-
+# ===== UI =====
+st.title("Pauta Mantención — PDF idéntico a la plantilla (A4 horizontal)")
 c1, c2 = st.columns(2)
 with c1:
     marca  = st.text_input("MARCA")
@@ -155,7 +122,7 @@ items2 = ["2.1. Chequeo de yugo de O2, N2O, Aire", "2.2. Revisión o reemplazo d
           "2.3. Verificación de entrada de presión", "2.4. Revisión y calibración de válvulas de flujometro de O2, N2O, Aire"]
 items3 = ["3.1. Revisión y calibración de válvula de flujómetro de N2O", "3.2. Revisión y calibración de válvula de flujometro de O2",
           "3.3. Revisión y calibración de válvula de flujometro de Aire", "3.4. Chequeo de fugas", "3.5. Verificación de flujos",
-          "3.6. Verificación de regulador de 2da (segunda) etapa", "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
+          "3.6. Verificación de regulador de 2da etapa", "3.7. Revisión de sistema de corte N2O/Aire por falta de O2",
           "3.8. Revisión de sistema proporción de O2/N2O", "3.9. Revisión de manifold de vaporizadores"]
 items4 = ["4.1. Revisión o reemplazo de empaquetadura de canister", "4.2. Revisión de válvula APL",
           "4.3. Verificación de manómetro de presión de vía aérea (ajuste a cero)", "4.4. Revisión de válvula inhalatoria",
@@ -198,7 +165,6 @@ with cT2:
                           background_color="#fff", height=110, width=260, drawing_mode="freedraw", key="firma_tec")
 
 obs_int = st.text_area("Observaciones (uso interno)", height=90)
-
 st.subheader("Recepción conforme")
 cR1, cR2 = st.columns(2)
 with cR1:
@@ -210,16 +176,27 @@ with cR2:
     firma_cli = st_canvas(fill_color="rgba(0,0,0,0)", stroke_width=2, stroke_color="#000",
                           background_color="#fff", height=95, width=240, drawing_mode="freedraw", key="firma_cli")
 
-# ======================= Construcción del overlay sobre la plantilla =======================
+# ===== Construcción del overlay + corrección automática de columnas der =====
 def build_overlay(template_path="MAQ ANESTESIA_V2.pdf"):
     reader = PdfReader(template_path)
     page = reader.pages[0]
     W, H = float(page.mediabox.width), float(page.mediabox.height)
+    PAGE_W_MM = W / MM  # ~ 297 mm
+
+    # Si alguna columna propuesta cae fuera de página, re-centra el bloque der.
+    def safe_cols(ok, no, na):
+        max_x = max(ok, no, na)
+        if max_x <= PAGE_W_MM - 6:  # deja margen de 6 mm
+            return ok, no, na
+        shift = max_x - (PAGE_W_MM - 6)
+        return ok - shift, no - shift, na - shift
+
+    # Corrección antes de pintar
+    r_ok, r_no, r_na = safe_cols(BASE["checks_right"]["ok"], BASE["checks_right"]["no"], BASE["checks_right"]["na"])
 
     buf = io.BytesIO()
     c = rl_canvas.Canvas(buf, pagesize=(W, H))
 
-    # Helpers
     def text_at(txt, x_mm, y_mm, size=9):
         c.setFont("Helvetica", size)
         c.drawString(x_mm * MM, H - y_mm * MM, txt or "")
@@ -231,110 +208,91 @@ def build_overlay(template_path="MAQ ANESTESIA_V2.pdf"):
 
     def x_mark(cx_mm, y_mm):
         c.setFont("Helvetica-Bold", 10)
-        # +CHECK_Y_OFFSET corrige el centrado vertical de la X en la casilla
         c.drawCentredString(cx_mm * MM, H - (y_mm + CHECK_Y_OFFSET) * MM, "X")
 
-    # CABECERA
-    for k, val in [
-        ("marca", marca), ("modelo", modelo), ("sn", sn),
-        ("ninv", n_inv), ("ubic", ubic)
-    ]:
-        x, y = BASE["cab"][k]["x"], BASE["cab"][k]["y"]
-        x, y = P(x, y, cab_dx, cab_dy)
+    # Cabecera
+    for k, val in [("marca", marca), ("modelo", modelo), ("sn", sn), ("ninv", n_inv), ("ubic", ubic)]:
+        x, y = offset(BASE["cab"][k]["x"], BASE["cab"][k]["y"], cab_dx, cab_dy)
         text_at(val, x, y)
-    x, y = P(BASE["cab"]["fecha"]["x"], BASE["cab"]["fecha"]["y"], cab_dx, cab_dy)
+    x, y = offset(BASE["cab"]["fecha"]["x"], BASE["cab"]["fecha"]["y"], cab_dx, cab_dy)
     text_at(fecha.strftime("%d/%m/%Y"), x, y)
 
-    # CHECKS IZQUIERDA
+    # Checks izquierda
     L = BASE["checks_left"]
     for sec_y, items in [(L["sec1_y"], res1), (L["sec2_y"], res2), (L["sec3_y"], res3), (L["sec4_y"], res4)]:
         y = sec_y + l_dy + glob_dy
         for sel in items:
             cx = {"OK": L["ok"] + l_dx + glob_dx, "NO": L["no"] + l_dx + glob_dx, "N/A": L["na"] + l_dx + glob_dx}[sel]
-            x_mark(cx, y)
-            y += L["row_h"]
+            x_mark(cx, y); y += L["row_h"]
 
-    # CHECKS DERECHA
+    # Checks derecha (con columnas seguras)
     R = BASE["checks_right"]
     for sec_y, items in [(R["sec5a_y"], res5[:6]), (R["sec5b_y"], res5[6:]), (R["sec6_y"], res6)]:
         y = sec_y + r_dy + glob_dy
         for sel in items:
-            cx = {"OK": R["ok"] + r_dx + glob_dx, "NO": R["no"] + r_dx + glob_dx, "N/A": R["na"] + r_dx + glob_dx}[sel]
-            x_mark(cx, y)
-            y += R["row_h"]
+            cx = {"OK": r_ok + r_dx + glob_dx, "NO": r_no + r_dx + glob_dx, "N/A": r_na + r_dx + glob_dx}[sel]
+            x_mark(cx, y); y += R["row_h"]
 
-    # 7. INSTRUMENTOS
+    # 7. Instrumentos
     for key, val in [("eq1", eq1), ("ma1", ma1), ("mo1", mo1), ("se1", se1),
                      ("eq2", eq2), ("ma2", ma2), ("mo2", mo2), ("se2", se2)]:
-        x0, y0 = BASE["ia"][key]["x"], BASE["ia"][key]["y"]
-        x0, y0 = P(x0, y0, ia_dx, ia_dy)
+        x0, y0 = offset(BASE["ia"][key]["x"], BASE["ia"][key]["y"], ia_dx, ia_dy)
         text_at(val, x0, y0)
 
-    # OBSERVACIONES
-    x0, y0 = P(BASE["obs"]["x"], BASE["obs"]["y"], obs_dx, obs_dy)
+    # Observaciones
+    x0, y0 = offset(BASE["obs"]["x"], BASE["obs"]["y"], obs_dx, obs_dy)
     lines_block(obs, x0, y0, BASE["obs"]["line_h"], BASE["obs"]["max_lines"])
 
-    # EQUIPO OPERATIVO
-    x0, y0 = P(BASE["operativo"]["x"], BASE["operativo"]["y"], obs_dx, obs_dy)
+    # Equipo operativo
+    x0, y0 = offset(BASE["operativo"]["x"], BASE["operativo"]["y"], obs_dx, obs_dy)
     text_at(f"SI [ {'X' if op=='SI' else ' '} ]    NO [ {'X' if op=='NO' else ' '} ]", x0, y0)
 
-    # TÉCNICO + FIRMA
-    x0, y0 = P(BASE["tecnico"]["x"], BASE["tecnico"]["y"], tec_dx, tec_dy)
+    # Técnico + firma
+    x0, y0 = offset(BASE["tecnico"]["x"], BASE["tecnico"]["y"], tec_dx, tec_dy)
     text_at(tecnico, x0, y0)
     ftec = recortar_firma(firma_tec)
     if ftec:
-        bx, by = P(BASE["firma_tec_box"]["x"], BASE["firma_tec_box"]["y"], tec_dx, tec_dy)
+        bx, by = offset(BASE["firma_tec_box"]["x"], BASE["firma_tec_box"]["y"], tec_dx, tec_dy)
         bw, bh = BASE["firma_tec_box"]["w"], BASE["firma_tec_box"]["h"]
         img = Image.open(ftec); iw, ih = img.size
-        s = min((bw*MM)/iw, (bh*MM)/ih)
-        dw, dh = iw*s, ih*s
-        x_pt = bx*MM + (bw*MM - dw)/2
-        y_pt = H - by*MM - bh*MM + (bh*MM - dh)/2
+        s = min((bw*MM)/iw, (bh*MM)/ih); dw, dh = iw*s, ih*s
+        x_pt = bx*MM + (bw*MM - dw)/2; y_pt = H - by*MM - bh*MM + (bh*MM - dh)/2
         c.drawImage(ImageReader(ftec), x_pt, y_pt, width=dw, height=dh, mask='auto')
 
-    # EMPRESA
-    x0, y0 = P(BASE["empresa"]["x"], BASE["empresa"]["y"], emp_dx, emp_dy)
+    # Empresa
+    x0, y0 = offset(BASE["empresa"]["x"], BASE["empresa"]["y"], emp_dx, emp_dy)
     text_at(empresa, x0, y0)
 
-    # OBS. USO INTERNO
-    x0, y0 = P(BASE["obs_int"]["x"], BASE["obs_int"]["y"], oi_dx, oi_dy)
+    # Obs (uso interno)
+    x0, y0 = offset(BASE["obs_int"]["x"], BASE["obs_int"]["y"], oi_dx, oi_dy)
     lines_block(obs_int, x0, y0, BASE["obs_int"]["line_h"], BASE["obs_int"]["max_lines"])
 
-    # RECEPCIÓN CONFORME (FIRMAS)
+    # Recepción conforme (firmas)
     for key, firma, dx, dy in [("rc_ing", firma_ing, rc_dx, rc_dy), ("rc_cli", firma_cli, rc_dx, rc_dy)]:
         fpng = recortar_firma(firma)
         if not fpng: continue
-        bx, by = P(BASE[key]["x"], BASE[key]["y"], dx, dy)
+        bx, by = offset(BASE[key]["x"], BASE[key]["y"], dx, dy)
         bw, bh = BASE[key]["w"], BASE[key]["h"]
         img = Image.open(fpng); iw, ih = img.size
-        s = min((bw*MM)/iw, (bh*MM)/ih)
-        dw, dh = iw*s, ih*s
-        x_pt = bx*MM + (bw*MM - dw)/2
-        y_pt = H - by*MM - bh*MM + (bh*MM - dh)/2
+        s = min((bw*MM)/iw, (bh*MM)/ih); dw, dh = iw*s, ih*s
+        x_pt = bx*MM + (bw*MM - dw)/2; y_pt = H - by*MM - bh*MM + (bh*MM - dh)/2
         c.drawImage(ImageReader(fpng), x_pt, y_pt, width=dw, height=dh, mask='auto')
 
     c.showPage(); c.save(); buf.seek(0)
     return buf
 
-# ====================== Fusión overlay + plantilla y descarga ======================
 def merge_with_template(overlay_bytes, template_path="MAQ ANESTESIA_V2.pdf"):
     base_reader = PdfReader(template_path)
     base_page = base_reader.pages[0]
     ov_reader = PdfReader(overlay_bytes)
     ov_page = ov_reader.pages[0]
     merged = PageObject.create_blank_page(width=base_page.mediabox.width, height=base_page.mediabox.height)
-    merged.merge_page(base_page)
-    merged.merge_page(ov_page)
-    writer = PdfWriter(); writer.add_page(merged)
-    out = io.BytesIO(); writer.write(out); out.seek(0)
-    return out
+    merged.merge_page(base_page); merged.merge_page(ov_page)
+    out = io.BytesIO(); PdfWriter().add_page(merged); writer = PdfWriter(); writer.add_page(merged)
+    writer.write(out); out.seek(0); return out
 
 if st.button("Generar PDF (igual a plantilla, Horizontal)"):
     overlay = build_overlay("MAQ ANESTESIA_V2.pdf")
     final_pdf = merge_with_template(overlay, "MAQ ANESTESIA_V2.pdf")
-    st.download_button(
-        "Descargar PDF (V2 — 1:1)",
-        data=final_pdf.getvalue(),
-        file_name=f"MP_Anestesia_V2_{(sn or 'sin_serie')}.pdf",
-        mime="application/pdf"
-    )
+    st.download_button("Descargar PDF (V2 — 1:1)", final_pdf.getvalue(),
+        file_name=f"MP_Anestesia_V2_{(sn or 'sin_serie')}.pdf", mime="application/pdf")
