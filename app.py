@@ -221,40 +221,40 @@ def main():
         pdf = FPDF('L', 'mm', 'A4')
         pdf.add_page()
 
-        # ========= ENCABEZADO: LOGO grande y Fila gris hasta la mitad =========
-        # Logo "fuera" de los márgenes: lo ubicamos casi al borde
-        logo_x, logo_y = 6, 4
-        # Intentar logo grande; si no deja espacio para la franja hasta la mitad, se ajusta
-        desired_logo_w = 88  # más grande
-        page_w = pdf.w
-        mid_x = page_w / 2.0
+        # ========= ENCABEZADO: LOGO pegado a los bordes + Fila gris con ancho según texto =========
+        logo_x, logo_y = 2, 2          # pegado a los bordes
+        logo_w = 36                    # menor tamaño
+        title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
-        # Calcula ancho disponible (mitad - separación mínima - logo)
-        min_title_w = 20     # ancho mínimo para que se vea
-        sep = 6              # separación entre logo y franja
-        # si el logo "choca" con la mitad, lo reducimos lo justo
-        max_logo_w = max(40, (mid_x - logo_x - sep - min_title_w))
-        logo_w = min(desired_logo_w, max_logo_w)
-
+        # Calcula altura real del logo para evitar superposiciones
+        logo_h = 0
         try:
+            with Image.open("logo_hrt_final.jpg") as im:
+                ratio = im.height / im.width if im.width else 1.0
+                logo_h = logo_w * ratio
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=logo_w)
         except Exception as e:
             st.warning(f"No se pudo cargar el logo: {e}. Asegúrate de que 'logo_hrt_final.jpg' esté en la misma carpeta.")
+            logo_h = logo_w  # fallback aproximado
 
-        # Fila gris con letra más pequeña y altura acorde, hasta la MITAD exacta
+        # Fila gris a la derecha del logo, ANCHO = largo del texto (con padding)
+        sep = 4  # separación entre logo y fila
         title_x = logo_x + logo_w + sep
-        title_y = logo_y + 4
-        title_w = max(min_title_w, mid_x - title_x)
+        title_y = logo_y + 2
+        pdf.set_font("Arial", "B", 9)   # letra más pequeña
         pdf.set_fill_color(230, 230, 230)
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_xy(title_x, title_y)
-        pdf.set_font("Arial", "B", 9)  # letra más pequeña
-        title_h = 7                    # altura acorde a ese tamaño
-        pdf.cell(title_w, title_h, "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA",
-                 border=1, ln=1, align="C", fill=True)
 
-        # Punto de arranque del contenido (debajo del encabezado)
-        content_y_base = title_y + title_h + 10
+        text_w = pdf.get_string_width(title_text)
+        pad = 6                         # padding horizontal total = 2*pad
+        cell_w = text_w + pad
+        title_h = 7                     # altura acorde al tamaño de letra
+
+        pdf.set_xy(title_x, title_y)
+        pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
+
+        # Punto de arranque del contenido: debajo del punto más bajo del logo o de la fila
+        header_bottom = max(logo_y + logo_h, title_y + title_h)
+        content_y_base = header_bottom + 8
         pdf.set_y(content_y_base)
 
         # =================== COLUMNA IZQUIERDA ===================
@@ -281,8 +281,8 @@ def main():
         create_checkbox_table(pdf, "4. Sistema absorbedor", sistema_absorbedor, x_pos=22)
 
         # =================== COLUMNA DERECHA ===================
-        # Sube el punto 5 respecto al arranque base (más arriba)
-        y_column_start_right = max(title_y + title_h + 2, content_y_base - 18)  # <- subido
+        # Arranca alineado al comienzo del contenido (sin solapar encabezado).
+        y_column_start_right = content_y_base
         pdf.set_y(y_column_start_right)
 
         create_checkbox_table(pdf, "5. Ventilador mecánico", ventilador_mecanico, x_pos=160)
