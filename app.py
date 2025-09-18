@@ -262,7 +262,7 @@ def main():
         except Exception:
             st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
-        pdf.set_font("Arial", "B", 7)      # título (se mantiene)
+        pdf.set_font("Arial", "B", 7)
         title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
         title_y = (logo_y + logo_h) - title_h
@@ -347,7 +347,7 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=3.4,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas =======
+        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas (SIN LÍNEAS) =======
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
@@ -359,30 +359,29 @@ def main():
         left_x = SECOND_COL_LEFT
         right_x = SECOND_COL_LEFT + col_w + gap_cols
         label_w = 17.0
-        base_line_w = col_w - label_w - 3.0
-        row_h_field = 4.4  # interlineado menor
+        text_w = col_w - label_w - 3.0
+        row_h_field = 3.4  # interlineado EXACTO 3.4 mm
 
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
-        def draw_column(x, y, data):
+        # Columnas SIN líneas (ni bordes inferiores)
+        def draw_column_no_lines(x, y, data):
             pdf.set_font("Arial", "", 7.5)
             yy = y
-            def field(lbl, val="", w_override=None):
+            def field(lbl, val=""):
                 nonlocal yy
-                line_w = base_line_w if w_override is None else w_override
                 pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-                pdf.set_xy(x + label_w + 2, yy); pdf.cell(line_w, row_h_field, (val or ""), border="B", ln=1)
-                yy += row_h_field + 1.0  # menos espacio vertical
+                pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
+                yy += row_h_field  # interlineado fijo de 3.4 mm
             field("EQUIPO",  data.get('equipo', ''))
             field("MARCA",   data.get('marca', ''))
             field("MODELO",  data.get('modelo', ''))
-            # NÚMERO DE SERIE más corta (75% del largo)
-            field("NÚMERO DE SERIE", data.get('serie', ''), w_override=base_line_w * 0.75)
+            field("NÚMERO DE SERIE", data.get('serie', ''))
             return yy
 
-        end_left = draw_column(left_x, start_y_7, e0)
-        end_right = draw_column(right_x, start_y_7, e1)
+        end_left = draw_column_no_lines(left_x, start_y_7, e0)
+        end_right = draw_column_no_lines(right_x, start_y_7, e1)
         pdf.set_y(max(end_left, end_right) + 2)
 
         # ---------- Observaciones (general) ----------
