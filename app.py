@@ -28,7 +28,8 @@ def _crop_signature(canvas_result):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=16):
+def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=72, h_mm=20):
+    """Pega la firma en (x,y) con dimensiones ampliadas (por defecto 72x20 mm)."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -62,6 +63,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
+    # Cabecera gris con bordes en OK/NO/N/A
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -72,6 +74,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
+    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -93,26 +96,19 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.4)
 
-def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
-                         head_h=4.6, fs_head=7.2, fs_body=7.0,
-                         body_line_h=3.2, padding=1.2):
+def draw_boxed_text(pdf, x, y, w, min_h, title, text, head_h=4.8, fs=7.5, body_line_h=3.4):
+    # Encabezado
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", "B", fs_head)
+    pdf.set_font("Arial", "B", fs)
     pdf.cell(w, head_h, title, border=1, ln=1, align="L", fill=True)
-
+    # Cuerpo
     y_body = y + head_h
-    x_text = x + padding
-    w_text = max(1, w - 2*padding)
-    pdf.set_xy(x_text, y_body + padding)
-    pdf.set_font("Arial", "", fs_body)
-    if text:
-        pdf.multi_cell(w_text, body_line_h, text, border=0, align="L")
-
-    end_y = pdf.get_y()
-    content_h = max(min_h, (end_y - (y_body + padding)) + padding)
-    pdf.rect(x, y_body, w, content_h)
-    pdf.set_y(y_body + content_h)
+    pdf.rect(x, y_body, w, min_h)
+    pdf.set_xy(x + 1.2, y_body + 1.2)
+    pdf.set_font("Arial", "", fs)
+    pdf.multi_cell(w - 2.4, body_line_h, text, border=0, align="L")
+    pdf.set_y(max(pdf.get_y(), y_body + min_h))
 
 # ========= app =========
 def main():
@@ -215,19 +211,19 @@ def main():
         st.write("Técnico Encargado:")
         canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
                                           stroke_color="#000000", background_color="#EEEEEE",
-                                          height=190, width=360, drawing_mode="freedraw",
+                                          height=210, width=420, drawing_mode="freedraw",
                                           key="canvas_tecnico")
     with col_ingenieria:
         st.write("Ingeniería Clínica:")
         canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
                                              stroke_color="#000000", background_color="#EEEEEE",
-                                             height=190, width=360, drawing_mode="freedraw",
+                                             height=210, width=420, drawing_mode="freedraw",
                                              key="canvas_ingenieria")
     with col_clinico:
         st.write("Personal Clínico:")
         canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
                                           stroke_color="#000000", background_color="#EEEEEE",
-                                          height=190, width=360, drawing_mode="freedraw",
+                                          height=210, width=420, drawing_mode="freedraw",
                                           key="canvas_clinico")
 
     if st.button("Generar PDF"):
@@ -267,7 +263,7 @@ def main():
         except Exception:
             st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
-        pdf.set_font("Arial", "B", 7)
+        pdf.set_font("Arial", "B", 7)      # título
         title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
         title_y = (logo_y + logo_h) - title_h
@@ -280,47 +276,36 @@ def main():
         pdf.set_y(content_y_base)
 
         # ======= COLUMNA IZQUIERDA =======
+        pdf.set_x(FIRST_COL_LEFT)
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
+        # FECHA (3 celdas) alineada con "Marca"
         y_marca = pdf.get_y()
         date_col_w   = 11.0
         date_table_w = date_col_w * 3
         x_date_right = FIRST_TAB_RIGHT
         x_date       = x_date_right - date_table_w
-        fecha_label_w = 13.0
+        label_w      = 13.0
         gap_lab_box  = 1.8
-        x_label_fecha = x_date - fecha_label_w - gap_lab_box
+        x_label      = x_date - label_w - gap_lab_box
+        marca_text_w = max(22, x_label - FIRST_COL_LEFT - 2)
 
-        label_w_common = 17.0
-        gap_after_label = 2.0
-
-        pdf.set_xy(FIRST_COL_LEFT, y_marca)
-        pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
-        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + gap_after_label)
-        value_w_line1 = max(10, value_w_line1)
-        pdf.cell(value_w_line1, line_h, f"{marca}", 0, 0, "L")
-
-        pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
-        pdf.set_font("Arial", "", 7.5)
         dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
+
+        pdf.set_xy(FIRST_COL_LEFT, y_marca); pdf.cell(marca_text_w, line_h, f"Marca: {marca}", 0, 0, "L")
+        pdf.set_xy(x_label, y_marca); pdf.set_font("Arial", "B", 7.5); pdf.cell(label_w, line_h, "FECHA:", 0, 0, "R")
+        pdf.set_font("Arial", "", 7.5)
         pdf.set_xy(x_date, y_marca)
         pdf.cell(date_col_w, line_h, dd,   1, 0, "C")
         pdf.cell(date_col_w, line_h, mm,   1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
 
-        def left_field(lbl, val):
-            pdf.set_x(FIRST_COL_LEFT)
-            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
-            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
-            pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
-
-        left_field("Modelo", modelo)
-        left_field("Número de Serie", sn)
-        left_field("Número de Inventario", inventario)
-        left_field("Ubicación", ubicacion)
+        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Modelo: {modelo}", 0, 1)
+        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Número de Serie: {sn}", 0, 1)
+        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Número de Inventario: {inventario}", 0, 1)
+        pdf.set_x(FIRST_COL_LEFT); pdf.cell(0, line_h, f"Ubicación: {ubicacion}", 0, 1)
 
         pdf.ln(2.6)
 
@@ -338,29 +323,17 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
+        # Punto 5 (izquierda): título + nota + 5.1...5.6
         vm_izq = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
-        # Cabecera 5
+        create_checkbox_table(pdf, "5. Ventilador mecánico", vm_izq, x_pos=FIRST_COL_LEFT,
+                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
+                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
+        # Nota bajo el 5 (mismos tamaños que subtítulos)
         pdf.set_x(FIRST_COL_LEFT)
-        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", "B", 7.2)
-        title_prefix = " " * (2 * 2)
-        pdf.cell(ITEM_W, LEFT_ROW_H, f"{title_prefix}5. Ventilador mecánico", border=1, ln=0, align="L", fill=True)
-        pdf.set_font("Arial", "B", 6.2)
-        pdf.cell(COL_W, LEFT_ROW_H, "OK",  border=1, ln=0, align="C", fill=True)
-        pdf.cell(COL_W, LEFT_ROW_H, "NO",  border=1, ln=0, align="C", fill=True)
-        pdf.cell(COL_W, LEFT_ROW_H, "N/A", border=1, ln=1, align="C", fill=True)
-        # Leyenda 5.x
         pdf.set_font("Arial", "", 6.2)
-        pdf.set_x(FIRST_COL_LEFT)
-        pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)
-        pdf.cell(max(1, ITEM_W - 5.0), LEFT_ROW_H,
-                 "Verifique que el equipo muestra en pantalla los siguientes parámetros:",
-                 border=0, ln=1, align="L")
-        create_rows_only(pdf, vm_izq, x_pos=FIRST_COL_LEFT,
-                         item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, cell_fs=6.2, indent_w=5.0)
-
+        pdf.cell(ITEM_W, LEFT_ROW_H, "   Verifique que el equipo muestra en pantalla los siguientes parámetros:", 0, 1)
         pdf.ln(1.6)
 
         # ======= COLUMNA DERECHA =======
@@ -368,7 +341,7 @@ def main():
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_font("Arial", "", 6.2)
         pdf.multi_cell(col_total_w, 3.4, "Verifique que el equipo realiza las siguientes acciones:", border=0)
-        pdf.ln(0.2)
+        pdf.ln(0.4)
 
         vm_der = [(it, val) for it, val in ventilador_mecanico if it.startswith("5.7.") or it.startswith("5.8.")]
         if vm_der:
@@ -379,7 +352,7 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=3.4,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas (sin líneas) =======
+        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas (sin líneas bajo los campos) =======
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
@@ -391,35 +364,34 @@ def main():
         left_x = SECOND_COL_LEFT
         right_x = SECOND_COL_LEFT + col_w + gap_cols
         label_w = 17.0
-        text_w = col_w - label_w - 3.0
-        row_h_field = 3.4
-        pdf.set_font("Arial", "", 6.2)
+        row_h_field = 3.4  # interlineado solicitado
 
         e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
         e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
 
-        def draw_column_no_lines(x, y, data):
+        def draw_column_plain(x, y, data):
+            pdf.set_font("Arial", "", 6.2)  # mismo tamaño que subtítulos
             yy = y
             def field(lbl, val=""):
                 nonlocal yy
                 pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-                pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
-                yy += row_h_field
+                pdf.set_xy(x + label_w + 2, yy); pdf.cell(col_w - label_w - 3, row_h_field, (val or ""), border=0, ln=1)
+                yy += row_h_field + 1.0
             field("EQUIPO",  data.get('equipo', ''))
             field("MARCA",   data.get('marca', ''))
             field("MODELO",  data.get('modelo', ''))
             field("NÚMERO DE SERIE", data.get('serie', ''))
             return yy
 
-        end_left = draw_column_no_lines(left_x, start_y_7, e0)
-        end_right = draw_column_no_lines(right_x, start_y_7, e1)
+        end_left = draw_column_plain(left_x, start_y_7, e0)
+        end_right = draw_column_plain(right_x, start_y_7, e1)
         pdf.set_y(max(end_left, end_right) + 2)
 
-        # ---------- Observaciones ----------
-        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                             w=col_total_w, min_h=10,
-                             title="Observaciones", text=observaciones,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
+        # ---------- Observaciones (general) ----------
+        draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                        w=col_total_w, min_h=18,
+                        title="Observaciones", text=observaciones,
+                        head_h=4.8, fs=7.5, body_line_h=3.4)
         pdf.ln(2)
 
         # ---------- Equipo Operativo + Nombre/Firma + Empresa ----------
@@ -430,78 +402,77 @@ def main():
         pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
         y_nombre = pdf.get_y()
         name_text = f"Nombre Técnico/Ingeniero: {tecnico}"
-        name_box_w = min(100, col_total_w * 0.58)
-        pdf.cell(name_box_w, 4.6, name_text, 0, 0, "L")
-        pdf.cell(14, 4.6, "Firma:", 0, 0, "L")
+        name_box_w = min(110, col_total_w * 0.60)
+        pdf.cell(name_box_w, 4.8, name_text, 0, 0, "L")
+        pdf.cell(16, 4.8, "Firma:", 0, 0, "L")
         x_sig_tecnico = pdf.get_x()
-        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=60, h_mm=16)
-        pdf.set_y(y_nombre + 16 + 2)
+        # Firma de técnico ampliada
+        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=72, h_mm=20)
+        pdf.set_y(y_nombre + 20 + 2)
 
         pdf.set_x(SECOND_COL_LEFT)
         pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
+
+        # Espacio extra entre Empresa y Observaciones (uso interno)
         pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
-        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                             w=col_total_w, min_h=10,
-                             title="Observaciones (uso interno)", text=observaciones_interno,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
+        draw_boxed_text(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                        w=col_total_w, min_h=14,
+                        title="Observaciones (uso interno)", text=observaciones_interno,
+                        head_h=4.8, fs=7.5, body_line_h=3.4)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción (centradas EXACTO sobre el texto) ----------
-        # Centro de cada bloque (cuartos de la 2ª columna)
+        # ---------- Firmas de recepción (centradas y con DOBLE línea, firma MÁS GRANDE) ----------
+        pdf.ln(2)
+
+        # centros de cada bloque dentro de la 2ª columna
         ancho_area = col_total_w
         center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
         center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
 
-        # Dimensión deseada de la firma
-        sig_recep_w = 58
-        sig_recep_h = 16
+        # Anchos coherentes
+        block_w = 74.0       # largo de la doble línea
+        sig_w   = 72.0       # firma más grande
+        sig_h   = 20.0
 
-        # Calcular ancho “ancla” según el texto en negrita (para centrar todo igual)
-        pdf.set_font("Arial", "B", 7.5)
-        w_top     = pdf.get_string_width("RECEPCIÓN CONFORME")
-        w_bottom1 = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
-        w_bottom2 = pdf.get_string_width("PERSONAL CLÍNICO")
-        pad = 10  # margen
-        anchor_w_left  = max(sig_recep_w, w_top, w_bottom1) + pad
-        anchor_w_right = max(sig_recep_w, w_top, w_bottom2) + pad
+        # X alineadas por centro
+        x_block_left  = center_left  - block_w/2.0
+        x_block_right = center_right - block_w/2.0
+        x_sig_left    = center_left  - sig_w/2.0
+        x_sig_right   = center_right - sig_w/2.0
 
-        # Coordenadas de cada ancla
-        x_anchor_left  = center_left  - anchor_w_left/2.0
-        x_anchor_right = center_right - anchor_w_right/2.0
-
-        # Posiciones verticales
+        # Y de inicio para imágenes
         y_anchor_top = pdf.get_y()
-        y_sig = y_anchor_top + 2.0  # imagen un poco por encima de la línea
+        y_sig = y_anchor_top + 2.0
 
-        # Dibujar firmas centradas en el mismo eje que el texto
-        add_signature_inline(pdf, canvas_result_ingenieria,
-                             x=center_left - sig_recep_w/2.0, y=y_sig,
-                             w_mm=sig_recep_w, h_mm=sig_recep_h)
-        add_signature_inline(pdf, canvas_result_clinico,
-                             x=center_right - sig_recep_w/2.0, y=y_sig,
-                             w_mm=sig_recep_w, h_mm=sig_recep_h)
+        # Imágenes (centradas exactamente sobre el mismo eje)
+        add_signature_inline(pdf, canvas_result_ingenieria, x=x_sig_left,  y=y_sig, w_mm=sig_w, h_mm=sig_h)
+        add_signature_inline(pdf, canvas_result_clinico,     x=x_sig_right, y=y_sig, w_mm=sig_w, h_mm=sig_h)
 
-        # Línea bajo las firmas (longitud = ancho del ancla)
-        y_line = y_sig + sig_recep_h + 3.0
+        # Doble línea de firma
+        y_line1 = y_sig + sig_h + 2.0
+        y_line2 = y_line1 + 0.9
         pdf.set_draw_color(0, 0, 0)
-        pdf.line(x_anchor_left,  y_line, x_anchor_left  + anchor_w_left,  y_line)
-        pdf.line(x_anchor_right, y_line, x_anchor_right + anchor_w_right, y_line)
+        pdf.line(x_block_left,  y_line1, x_block_left  + block_w, y_line1)
+        pdf.line(x_block_left,  y_line2, x_block_left  + block_w, y_line2)
+        pdf.line(x_block_right, y_line1, x_block_right + block_w, y_line1)
+        pdf.line(x_block_right, y_line2, x_block_right + block_w, y_line2)
 
-        # Textos centrados sobre el MISMO ancho ancla
+        # Textos en negrita, centrados
         pdf.set_font("Arial", "B", 7.5)
-        pdf.set_xy(x_anchor_left, y_line + 0.6)
-        pdf.cell(anchor_w_left, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
-        pdf.set_xy(x_anchor_left, pdf.get_y())
-        pdf.cell(anchor_w_left, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
+        pdf.set_xy(x_block_left,  y_line2 + 0.8)
+        pdf.cell(block_w, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
+        pdf.set_xy(x_block_left,  pdf.get_y())
+        pdf.cell(block_w, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
 
-        pdf.set_xy(x_anchor_right, y_line + 0.6)
-        pdf.cell(anchor_w_right, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
-        pdf.set_xy(x_anchor_right, pdf.get_y())
-        pdf.cell(anchor_w_right, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
+        pdf.set_xy(x_block_right, y_line2 + 0.8)
+        pdf.cell(block_w, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
+        pdf.set_xy(x_block_right, pdf.get_y())
+        pdf.cell(block_w, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
 
-        pdf.set_y(max(y_line + 9, pdf.get_y()))
+        # Avanzar cursor final
+        pdf.set_y(max(y_line2 + 9, pdf.get_y()))
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(),
