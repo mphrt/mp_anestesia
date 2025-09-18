@@ -473,9 +473,9 @@ def main():
         # ==== AJUSTES MANUALES DE POSICIÓN DE LAS IMÁGENES (en mm) ====
         # Valores positivos X -> derecha, negativos X -> izquierda
         # Valores positivos Y -> abajo,   negativos Y -> arriba
-        SIG_OFF_X_LEFT  = 12
+        SIG_OFF_X_LEFT  = 15
         SIG_OFF_Y_LEFT  = 0
-        SIG_OFF_X_RIGHT = 12
+        SIG_OFF_X_RIGHT = 15
         SIG_OFF_Y_RIGHT = 0
         # ===============================================================
 
