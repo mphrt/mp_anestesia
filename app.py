@@ -475,7 +475,7 @@ def main():
         # Valores positivos Y -> abajo,   negativos Y -> arriba
         SIG_OFF_X_LEFT  = 0
         SIG_OFF_Y_LEFT  = 0
-        SIG_OFF_X_RIGHT = 0
+        SIG_OFF_X_RIGHT = 3
         SIG_OFF_Y_RIGHT = 0
         # ===============================================================
 
