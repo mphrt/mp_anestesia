@@ -20,25 +20,30 @@ class PDF(FPDF):
         self._footer_lines = footer_lines or []
 
     def footer(self):
-        # Posicionar a ~15 mm del borde inferior
-        self.set_y(-15)
-        # Línea superior del pie (siguiendo márgenes)
-        x1 = self.l_margin
-        x2 = self.w - self.r_margin
-        y  = self.get_y()
-        self.set_draw_color(0, 0, 0)
-        self.set_line_width(0.2)
-        self.line(x1, y, x2, y)
-
-        # Texto del pie (alineado a la izquierda, siguiendo margen)
-        self.ln(1.6)
-        self.set_x(self.l_margin)
+        # Si no hay líneas de pie, no dibujar nada
         if not self._footer_lines:
             return
-        # Primera línea en negrita
+
+        # Posicionar a ~15 mm del borde inferior y respetar margen izquierdo
+        self.set_y(-15)
+        x_left = self.l_margin
+        y_top  = self.get_y()
+
+        # Primera línea del pie: línea superior EXACTA al largo del texto
+        first_line = self._footer_lines[0]
         self.set_font("Arial", "B", 7.0)
-        self.cell(0, 3.4, self._footer_lines[0], ln=1, align="L")
-        # Resto normal
+        text_w = self.get_string_width(first_line)
+
+        self.set_draw_color(0, 0, 0)
+        self.set_line_width(0.2)
+        self.line(x_left, y_top, x_left + text_w, y_top)
+
+        # Imprimir texto del pie (alineado a la izquierda, respetando margen)
+        self.ln(1.6)
+        self.set_x(self.l_margin)
+        self.cell(0, 3.4, first_line, ln=1, align="L")
+
+        # Resto de líneas del pie
         self.set_font("Arial", "", 6.6)
         for line in self._footer_lines[1:]:
             self.set_x(self.l_margin)
