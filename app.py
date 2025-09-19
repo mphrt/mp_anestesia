@@ -7,7 +7,7 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# ========= PDF con pie de página (línea = largo exacto del texto) =========
+# ========= PDF con pie de página =========
 class PDF(FPDF):
     def __init__(self, *args, footer_lines=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -21,21 +21,20 @@ class PDF(FPDF):
         x_left = self.l_margin
         y_top  = self.get_y()
 
-        # Primera línea en negrita y línea superior del MISMO LARGO DEL TEXTO
+        # Primera línea (en negrita) + línea superior exactamente del mismo largo
         first_line = self._footer_lines[0]
         self.set_font("Arial", "B", 7.0)
-        text_w = self.get_string_width(first_line)  # ← ancho exacto del texto
+        text_w = self.get_string_width(first_line)
 
         self.set_draw_color(0, 0, 0)
         self.set_line_width(0.2)
-        self.line(x_left, y_top, x_left + text_w, y_top)  # ← línea del mismo largo
+        self.line(x_left, y_top, x_left + text_w, y_top)
 
-        # Imprimir texto del pie (alineado al margen izquierdo)
+        # Imprimir texto del pie, alineado al margen izquierdo
         self.ln(1.6)
         self.set_x(self.l_margin)
         self.cell(0, 3.4, first_line, ln=1, align="L")
 
-        # Resto de líneas del pie
         self.set_font("Arial", "", 6.6)
         for line in self._footer_lines[1:]:
             self.set_x(self.l_margin)
@@ -63,6 +62,7 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=16):
+    """Dibuja la firma en (x, y). Ajusta w_mm/h_mm si necesitas otro tamaño."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -96,6 +96,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
+    # Cabecera gris con bordes en OK/NO/N/A
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -106,6 +107,7 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
+    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -490,17 +492,20 @@ def main():
         pdf.ln(2)
 
         # ---------- Firmas de recepción (líneas partidas + texto centrado) ----------
-        SIG_LEFT_DX  = 0.0   # ajustar firma izquierda en X
-        SIG_RIGHT_DX = 0.0   # ajustar firma derecha en X
-        SIG_DY       = 0.0   # ajustar ambas firmas en Y
+        # Variables para ajustar MANUALMENTE la posición de las firmas (mm)
+        SIG_LEFT_DX  = 0.0   # desplazar firma izquierda en X
+        SIG_RIGHT_DX = 0.0   # desplazar firma derecha en X
+        SIG_DY       = 0.0   # desplazar ambas firmas en Y (positivo hacia abajo)
 
         ancho_area = col_total_w
         cx_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
         cx_right = SECOND_COL_LEFT + (ancho_area * 0.75)
 
+        # Dimensiones de las firmas
         sig_w = 65
         sig_h = 20
 
+        # Calcular gap según texto (ancho del "hueco" entre líneas)
         pdf.set_font("Arial", "B", 7.5)
         w_top     = pdf.get_string_width("RECEPCIÓN CONFORME")
         w_bottom1 = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
@@ -508,28 +513,34 @@ def main():
         gap_left  = max(w_top, w_bottom1) + 2
         gap_right = max(w_top, w_bottom2) + 2
 
+        # Ancho total del bloque para dibujar líneas
         block_w_left  = max(sig_w + 12, gap_left + 12)
         block_w_right = max(sig_w + 12, gap_right + 12)
 
         y_block_top = pdf.get_y() + 2.0
         y_sig = y_block_top + SIG_DY
+        # Dibuja firmas (centradas sobre cada bloque)
         add_signature_inline(pdf, canvas_result_ingenieria,
                              x=cx_left - sig_w/2.0 + SIG_LEFT_DX, y=y_sig, w_mm=sig_w, h_mm=sig_h)
         add_signature_inline(pdf, canvas_result_clinico,
                              x=cx_right - sig_w/2.0 + SIG_RIGHT_DX, y=y_sig, w_mm=sig_w, h_mm=sig_h)
 
+        # Líneas partidas bajo las firmas
         y_line = y_sig + sig_h + 3.0
         pdf.set_draw_color(0, 0, 0)
         pdf.set_line_width(0.2)
 
+        # Izquierda
         half_left = (block_w_left - gap_left) / 2.0
         pdf.line(cx_left - gap_left/2.0 - half_left, y_line, cx_left - gap_left/2.0, y_line)
         pdf.line(cx_left + gap_left/2.0, y_line, cx_left + gap_left/2.0 + half_left, y_line)
-
+        # Derecha
         half_right = (block_w_right - gap_right) / 2.0
         pdf.line(cx_right - gap_right/2.0 - half_right, y_line, cx_right - gap_right/2.0, y_line)
         pdf.line(cx_right + gap_right/2.0, y_line, cx_right + gap_right/2.0 + half_right, y_line)
 
+        # Textos centrados en el hueco
+        pdf.set_font("Arial", "B", 7.5)
         y_text = y_line + 0.6
         pdf.set_xy(cx_left - gap_left/2.0, y_text)
         pdf.cell(gap_left, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
