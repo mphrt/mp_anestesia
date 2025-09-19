@@ -7,35 +7,38 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# ========= PDF con pie de página (línea = largo exacto del texto) =========
+# ========= Pie de página: PDF con footer =========
+FOOTER_LINES = [
+    "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)",
+    "UNIDAD DE INGENIERÍA CLÍNICA",
+    "HOSPITAL REGIONAL DE TALCA",
+]
+
 class PDF(FPDF):
     def __init__(self, *args, footer_lines=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._footer_lines = footer_lines or []
 
     def footer(self):
-        if not self._footer_lines:
-            return
-        # Ubicar ~15 mm sobre el borde inferior y respetar el margen izquierdo
+        # Posicionar a ~15 mm del borde inferior
         self.set_y(-15)
-        x_left = self.l_margin
-        y_top  = self.get_y()
-
-        # Primera línea en negrita y línea superior del MISMO LARGO DEL TEXTO
-        first_line = self._footer_lines[0]
-        self.set_font("Arial", "B", 7.0)
-        text_w = self.get_string_width(first_line)  # ← ancho exacto del texto
-
+        # Línea superior del pie (siguiendo márgenes)
+        x1 = self.l_margin
+        x2 = self.w - self.r_margin
+        y  = self.get_y()
         self.set_draw_color(0, 0, 0)
         self.set_line_width(0.2)
-        self.line(x_left, y_top, x_left + text_w, y_top)  # ← línea del mismo largo
+        self.line(x1, y, x2, y)
 
-        # Imprimir texto del pie (alineado al margen izquierdo)
+        # Texto del pie (alineado a la izquierda, siguiendo margen)
         self.ln(1.6)
         self.set_x(self.l_margin)
-        self.cell(0, 3.4, first_line, ln=1, align="L")
-
-        # Resto de líneas del pie
+        if not self._footer_lines:
+            return
+        # Primera línea en negrita
+        self.set_font("Arial", "B", 7.0)
+        self.cell(0, 3.4, self._footer_lines[0], ln=1, align="L")
+        # Resto normal
         self.set_font("Arial", "", 6.6)
         for line in self._footer_lines[1:]:
             self.set_x(self.l_margin)
@@ -268,12 +271,7 @@ def main():
         SIDE_MARGIN = 9
         TOP_MARGIN  = 4
 
-        FOOTER_LINES = [
-            "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)",
-            "UNIDAD DE INGENIERÍA CLÍNICA",
-            "HOSPITAL REGIONAL DE TALCA",
-        ]
-
+        # Usa la clase PDF con pie de página
         pdf = PDF('L', 'mm', 'A4', footer_lines=FOOTER_LINES)
         pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
         pdf.set_auto_page_break(True, margin=TOP_MARGIN + 8)
@@ -323,7 +321,6 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # FECHA (3 celdas) alineada con "Marca"
         y_marca = pdf.get_y()
         date_col_w   = 11.0
         date_table_w = date_col_w * 3
@@ -428,11 +425,11 @@ def main():
 
         start_y_7 = pdf.get_y() + 1.0
         gap_cols = 6
-        col_w_local = (col_total_w - gap_cols) / 2.0
+        col_w = (col_total_w - gap_cols) / 2.0
         left_x = SECOND_COL_LEFT
-        right_x = SECOND_COL_LEFT + col_w_local + gap_cols
+        right_x = SECOND_COL_LEFT + col_w + gap_cols
         label_w = 17.0
-        text_w = col_w_local - label_w - 3.0
+        text_w = col_w - label_w - 3.0
         row_h_field = 3.4
         pdf.set_font("Arial", "", 6.2)
 
@@ -489,59 +486,60 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción (líneas partidas + texto centrado) ----------
-        SIG_LEFT_DX  = 0.0   # ajustar firma izquierda en X
-        SIG_RIGHT_DX = 0.0   # ajustar firma derecha en X
-        SIG_DY       = 0.0   # ajustar ambas firmas en Y
-
+        # ---------- Firmas de recepción (líneas y textos fijos; imágenes ajustables por offset) ----------
         ancho_area = col_total_w
-        cx_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
-        cx_right = SECOND_COL_LEFT + (ancho_area * 0.75)
-
-        sig_w = 65
-        sig_h = 20
+        center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
+        center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
 
         pdf.set_font("Arial", "B", 7.5)
-        w_top     = pdf.get_string_width("RECEPCIÓN CONFORME")
-        w_bottom1 = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
-        w_bottom2 = pdf.get_string_width("PERSONAL CLÍNICO")
-        gap_left  = max(w_top, w_bottom1) + 2
-        gap_right = max(w_top, w_bottom2) + 2
+        w_rc = pdf.get_string_width("RECEPCIÓN CONFORME")
+        w_pi = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
+        w_pc = pdf.get_string_width("PERSONAL CLÍNICO")
+        text_block_w = max(w_rc, w_pi, w_pc) + 12
+        half_w = ancho_area / 2.0
+        max_line_len = half_w - 8
+        line_len = min(max(text_block_w, 65), max_line_len)
 
-        block_w_left  = max(sig_w + 12, gap_left + 12)
-        block_w_right = max(sig_w + 12, gap_right + 12)
+        sig_w = min(65, line_len - 6)
+        sig_h = 20
 
-        y_block_top = pdf.get_y() + 2.0
-        y_sig = y_block_top + SIG_DY
+        # === offsets manuales para mover solo las imágenes de firma ===
+        SIG_OFF_X_LEFT  = 0
+        SIG_OFF_Y_LEFT  = 0
+        SIG_OFF_X_RIGHT = 0
+        SIG_OFF_Y_RIGHT = 0
+
+        y_top = pdf.get_y()
+        y_sig = y_top + 2.0
+
+        x_line_left  = center_left  - line_len / 2.0
+        x_line_right = center_right - line_len / 2.0
+
         add_signature_inline(pdf, canvas_result_ingenieria,
-                             x=cx_left - sig_w/2.0 + SIG_LEFT_DX, y=y_sig, w_mm=sig_w, h_mm=sig_h)
+                             x=center_left - sig_w/2.0 + SIG_OFF_X_LEFT,
+                             y=y_sig + SIG_OFF_Y_LEFT,
+                             w_mm=sig_w, h_mm=sig_h)
         add_signature_inline(pdf, canvas_result_clinico,
-                             x=cx_right - sig_w/2.0 + SIG_RIGHT_DX, y=y_sig, w_mm=sig_w, h_mm=sig_h)
+                             x=center_right - sig_w/2.0 + SIG_OFF_X_RIGHT,
+                             y=y_sig + SIG_OFF_Y_RIGHT,
+                             w_mm=sig_w, h_mm=sig_h)
 
         y_line = y_sig + sig_h + 3.0
         pdf.set_draw_color(0, 0, 0)
-        pdf.set_line_width(0.2)
+        pdf.line(x_line_left,  y_line, x_line_left  + line_len, y_line)
+        pdf.line(x_line_right, y_line, x_line_right + line_len, y_line)
 
-        half_left = (block_w_left - gap_left) / 2.0
-        pdf.line(cx_left - gap_left/2.0 - half_left, y_line, cx_left - gap_left/2.0, y_line)
-        pdf.line(cx_left + gap_left/2.0, y_line, cx_left + gap_left/2.0 + half_left, y_line)
+        pdf.set_xy(x_line_left,  y_line + 0.8)
+        pdf.cell(line_len, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'C')
+        pdf.set_xy(x_line_left,  pdf.get_y())
+        pdf.cell(line_len, 3.6, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
 
-        half_right = (block_w_right - gap_right) / 2.0
-        pdf.line(cx_right - gap_right/2.0 - half_right, y_line, cx_right - gap_right/2.0, y_line)
-        pdf.line(cx_right + gap_right/2.0, y_line, cx_right + gap_right/2.0 + half_right, y_line)
+        pdf.set_xy(x_line_right, y_line + 0.8)
+        pdf.cell(line_len, 3.6, "RECEPCIÓN CONFORME", 0, 2, 'C')
+        pdf.set_xy(x_line_right, pdf.get_y())
+        pdf.cell(line_len, 3.6, "PERSONAL CLÍNICO", 0, 0, 'C')
 
-        y_text = y_line + 0.6
-        pdf.set_xy(cx_left - gap_left/2.0, y_text)
-        pdf.cell(gap_left, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
-        pdf.set_xy(cx_left - gap_left/2.0, pdf.get_y())
-        pdf.cell(gap_left, 3.8, "PERSONAL INGENIERÍA CLÍNICA", 0, 0, 'C')
-
-        pdf.set_xy(cx_right - gap_right/2.0, y_text)
-        pdf.cell(gap_right, 3.8, "RECEPCIÓN CONFORME", 0, 2, 'C')
-        pdf.set_xy(cx_right - gap_right/2.0, pdf.get_y())
-        pdf.cell(gap_right, 3.8, "PERSONAL CLÍNICO", 0, 0, 'C')
-
-        pdf.set_y(max(y_line + 9, pdf.get_y()))
+        pdf.set_y(max(y_line + 7, pdf.get_y()))
 
         output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
         st.download_button("Descargar PDF", output.getvalue(),
