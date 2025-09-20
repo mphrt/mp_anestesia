@@ -4,3 +4,8 @@ numpy
 streamlit-drawable-canvas
 reportlab
 pypdf
+
+fpdf2==2.7.9
+streamlit-drawable-canvas==0.9.3
+Pillow==10.4.0
+numpy==1.26.4
