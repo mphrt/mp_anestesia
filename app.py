@@ -171,8 +171,9 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         yy = y
         def field(lbl, val=""):
             nonlocal yy
-            pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}:", border=0, ln=0)
-            pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
+            # Cambio aquí: se elimina el texto en negrita y se añade ":" antes del valor
+            pdf.set_xy(x, yy); pdf.set_font("Arial", "", 6.2); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}", border=0, ln=0)
+            pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, f": {val}", border=0, ln=1)
             yy += row_h_field
         field("EQUIPO",  data.get('equipo', ''))
         field("MARCA",   data.get('marca', ''))
@@ -183,11 +184,9 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
     num_equipos = len(data_list)
     y_current = y_start
     
-    # Maneja de 1 a 2 equipos
     if num_equipos == 1:
-        # Dibuja la única columna en la posición inicial (x_start)
         draw_column_no_lines(x_start, y_current, data_list[0])
-        y_current = pdf.get_y() + 2 # Actualizar y_current después de la primera columna
+        y_current = pdf.get_y() + 2
     elif num_equipos >= 2:
         gap_cols = 6
         col_w2 = (col_w - gap_cols) / 2.0
@@ -198,9 +197,8 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         end_right = draw_column_no_lines(right_x, y_current, data_list[1])
         y_current = max(end_left, end_right) + 2
 
-    # Maneja 3 o 4 equipos, dibujando una segunda fila de columnas
     if num_equipos >= 3:
-        gap_cols = 6 # Definir de nuevo para este bloque, aunque ya existía
+        gap_cols = 6
         col_w2 = (col_w - gap_cols) / 2.0
         left_x = x_start
         right_x = x_start + col_w2 + gap_cols
