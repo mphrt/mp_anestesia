@@ -392,14 +392,14 @@ def main():
             pdf.cell(0, line_h, f" : {val}", 0, 1, "L")
             y_fields_start += line_h
         
+        # Campos del formulario
         left_field("MARCA", marca)
         left_field("MODELO", modelo)
         left_field("NÚMERO SERIE", sn)
         left_field("N° INVENTARIO", inventario)
         left_field("UBICACIÓN", ubicacion)
-
-        # Fecha a la derecha
-        y_fields_end = pdf.get_y()
+        
+        # Fecha a la derecha, en la misma fila de los campos
         date_col_w = 11.0
         date_table_w = date_col_w * 3
         x_date_right = FIRST_TAB_RIGHT
@@ -408,16 +408,20 @@ def main():
         gap_lab_box = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
         
-        pdf.set_xy(x_label_fecha, y_fields_start); pdf.set_font("Arial", "B", 7.5)
+        # Sube la posición del campo de fecha
+        y_date_position = y_fields_start - (5 * line_h)
+        
+        pdf.set_xy(x_label_fecha, y_date_position); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
         dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
-        pdf.set_xy(x_date, y_fields_start)
+        pdf.set_xy(x_date, y_date_position)
         pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
         pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         
-        pdf.set_y(y_fields_end + 2.6)
+        # Continúa el flujo del documento después de los campos
+        pdf.set_y(y_fields_start + 2.6)
 
         LEFT_ROW_H = 3.4
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
