@@ -321,7 +321,7 @@ def main():
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except Exception:
-            st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.')
+            st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
         pdf.set_font("Arial", "B", 7)
         title_h = 5.0
