@@ -293,9 +293,9 @@ def main():
 
     observaciones = st.text_area("Observaciones")
     observaciones_interno = st.text_area("Observaciones (uso interno)")
-    operativo = st.radio("¿Equipo operativo?", ["SI", "NO"])
-    tecnico = st.text_input("Nombre Técnico/Ingeniero")
-    empresa = st.text_input("Empresa Responsable")
+    operativo = st.radio("¿EQUIPO OPERATIVO?", ["SI", "NO"])
+    tecnico = st.text_input("NOMBRE TÉCNICO/INGENIERO")
+    empresa = st.text_input("EMPRESA RESPONSABLE")
 
     st.subheader("Firmas")
     col_tecnico, col_ingenieria, col_clinico = st.columns(3)
@@ -471,16 +471,16 @@ def main():
 
         pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
         y_nombre = pdf.get_y()
-        name_text = f"Nombre Técnico/Ingeniero: {tecnico}"
+        name_text = f"NOMBRE TÉCNICO/INGENIERO: {tecnico}"
         name_box_w = min(100, col_total_w * 0.58)
         pdf.cell(name_box_w, 4.6, name_text, 0, 0, "L")
-        pdf.cell(14, 4.6, "Firma:", 0, 0, "L")
+        pdf.cell(14, 4.6, "FIRMA:", 0, 0, "L")
         x_sig_tecnico = pdf.get_x()
         add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=65, h_mm=20)
         pdf.set_y(y_nombre + 20 + 2)
 
         pdf.set_x(SECOND_COL_LEFT)
-        pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
+        pdf.cell(0, 4.0, f"EMPRESA RESPONSABLE: {empresa}", 0, 1)
         pdf.ln(2.0)
 
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
