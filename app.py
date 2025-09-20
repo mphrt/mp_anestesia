@@ -171,14 +171,13 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
     row_h_field = 3.4
     label_w = 28.0
     text_w = col_w - label_w - 3.0
-    TAB = "  " * 2
     
     def draw_column_no_lines(x, y, data):
         yy = y
         def field(lbl, val=""):
             nonlocal yy
-            pdf.set_xy(x, yy); pdf.set_font("Arial", "", 6.2); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-            pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, f" {val}", border=0, ln=1)
+            pdf.set_xy(x, yy); pdf.set_font("Arial", "", 6.2); pdf.cell(label_w, row_h_field, f"{lbl}", border=0, ln=0)
+            pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" : {val}", border=0, ln=1)
             yy += row_h_field
         
         field("EQUIPO",  data.get('equipo', ''))
@@ -381,8 +380,8 @@ def main():
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
             pdf.set_font("Arial", "", 7.5)
-            pdf.cell(pdf.get_string_width(f"{lbl}:"), line_h, f"{lbl}:", 0, 0, "L")
-            pdf.cell(0, line_h, f" {val}", 0, 1, "L")
+            pdf.cell(pdf.get_string_width(f"{lbl}"), line_h, f"{lbl}", 0, 0, "L")
+            pdf.cell(0, line_h, f" : {val}", 0, 1, "L")
 
         left_field("Marca", marca)
         left_field("Modelo", modelo)
