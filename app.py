@@ -148,7 +148,8 @@ def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs
     pdf.set_font("Arial", "B", head_fs)
     
     headers = ["PRUEBA", "RITMO", "AMPL", "LOAD", "ENERGY SET", "ENERGY RESULT (J)"]
-    widths = [20, 15, 15, 15, 20, 25]
+    # Aumentar las anchuras para que la tabla sea un poco más grande
+    widths = [22, 18, 18, 18, 22, 28] 
     
     pdf.set_x(x_pos + indent_w)
     for i, header in enumerate(headers):
@@ -162,7 +163,8 @@ def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs
         for j, value in enumerate(values):
             pdf.cell(widths[j], row_h, value, border=1, ln=0, align="C")
         pdf.ln(row_h)
-    pdf.ln(1.6)
+    # Aumentar el espacio después de la tabla
+    pdf.ln(2.6)
 
 # ========= app =========
 def main():
@@ -311,7 +313,6 @@ def main():
         title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
         title_y = (logo_y + logo_h) - title_h
-        # Ajuste para que el ancho de la celda del título se extienda hasta el margen de la primera columna
         cell_w = FIRST_TAB_RIGHT - title_x
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y); pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
@@ -382,7 +383,8 @@ def main():
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, f"{TAB}4. Medición de potencias", border=1, ln=1, align="L", fill=True)
-        pdf.ln(1.0) # Espacio entre título y tabla
+        # Espacio adicional
+        pdf.ln(2.0)
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, indent_w=5.0)
         
         pdf.ln(1.6) # Espacio después de la tabla de potencias
