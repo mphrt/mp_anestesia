@@ -31,8 +31,7 @@ class PDF(FPDF):
 
         # Primera línea del pie: línea superior EXACTA al largo del texto
         first_line = self._footer_lines[0]
-        # Tamaño de letra igual a subtítulos (7.2) para medir longitud exacta
-        self.set_font("Arial", "B", 7.2)
+        self.set_font("Arial", "B", 7.0)
         text_w = self.get_string_width(first_line)
 
         self.set_draw_color(0, 0, 0)
@@ -40,18 +39,15 @@ class PDF(FPDF):
         self.line(x_left, y_top, x_left + text_w, y_top)
 
         # Imprimir texto del pie (alineado a la izquierda, respetando margen)
-        # Mantengo un pequeño espacio entre la línea y el texto
         self.ln(1.6)
         self.set_x(self.l_margin)
-        # Primera línea en negrita, interlineado 3.4mm
-        self.set_font("Arial", "B", 7.2)
         self.cell(0, 3.4, first_line, ln=1, align="L")
 
-        # Resto de líneas del pie con mismo tamaño de letra y mismo interlineado que subtítulos
-        self.set_font("Arial", "", 7.2)
+        # Resto de líneas del pie
+        self.set_font("Arial", "", 6.6)
         for line in self._footer_lines[1:]:
             self.set_x(self.l_margin)
-            self.cell(0, 3.4, line, ln=1, align="L")
+            self.cell(0, 3.2, line, ln=1, align="L")
 
 # ========= utilidades =========
 def _crop_signature(canvas_result):
@@ -108,8 +104,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
-    # Cabecera gris con bordes en OK/NO/N/A
-    title_prefix = " " * (title_tab_spaces * 2)  # "dos tabulaciones" ~ 4 espacios
+    title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", head_fs)
@@ -119,7 +114,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
-    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -143,19 +137,12 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
 
 def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
                          head_h=4.6, fs_head=7.2, fs_body=7.0,
-                         body_line_h=3.2, padding=1.2,
-                         title_tab_spaces=0):
-    """Caja con título gris y cuerpo auto-ajustable.
-       title_tab_spaces: nº de 'tabulaciones' (cada una ~2 espacios) previas al título.
-    """
-    # Encabezado
-    title_prefix = " " * (title_tab_spaces * 2)
+                         body_line_h=3.2, padding=1.2):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs_head)
-    pdf.cell(w, head_h, f"{title_prefix}{title}", border=1, ln=1, align="L", fill=True)
+    pdf.cell(w, head_h, title, border=1, ln=1, align="L", fill=True)
 
-    # Cuerpo
     y_body = y + head_h
     x_text = x + padding
     w_text = max(1, w - 2*padding)
@@ -321,7 +308,7 @@ def main():
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except Exception:
-            st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.')
+            st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
         pdf.set_font("Arial", "B", 7)
         title_h = 5.0
@@ -439,9 +426,7 @@ def main():
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
-        # Dos tabulaciones en el título del punto 7
-        title_prefix_7 = " " * (2 * 2)
-        pdf.cell(col_total_w, 4.0, f"{title_prefix_7}7. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
+        pdf.cell(col_total_w, 4.0, "7. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
 
         start_y_7 = pdf.get_y() + 1.0
         gap_cols = 6
@@ -474,12 +459,10 @@ def main():
         pdf.set_y(max(end_left, end_right) + 2)
 
         # ---------- Observaciones ----------
-        # Dos tabulaciones en el título
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=10,
                              title="Observaciones", text=observaciones,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2,
-                             title_tab_spaces=2)
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         # ---------- Equipo Operativo + Nombre/Firma + Empresa ----------
@@ -502,12 +485,10 @@ def main():
         pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
-        # Dos tabulaciones en el título
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=10,
                              title="Observaciones (uso interno)", text=observaciones_interno,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2,
-                             title_tab_spaces=2)
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         # ---------- Firmas de recepción (líneas y textos fijos; imágenes ajustables por offset) ----------
