@@ -373,7 +373,7 @@ def main():
         content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
-        # ======= COLUMNA IZQUIERDA (con formato de la imagen) =======
+        # ======= COLUMNA IZQUIERDA (con formato de la imagen y campos del formulario) =======
         line_h = 4.4
         label_w_common = 28.0
         
@@ -391,12 +391,13 @@ def main():
             pdf.set_xy(x_value, y_fields_start)
             pdf.cell(0, line_h, f" : {val}", 0, 1, "L")
             y_fields_start += line_h
-
-        left_field("EQUIPO", "Monitor/Desfibrilador") # Ejemplo para el PDF
+        
         left_field("MARCA", marca)
         left_field("MODELO", modelo)
         left_field("NÚMERO SERIE", sn)
-        
+        left_field("N° INVENTARIO", inventario)
+        left_field("UBICACIÓN", ubicacion)
+
         # Fecha a la derecha
         y_fields_end = pdf.get_y()
         date_col_w = 11.0
