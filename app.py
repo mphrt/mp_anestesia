@@ -22,16 +22,10 @@ class PDF(FPDF):
     def footer(self):
         if not self._footer_lines:
             return
-
-        # Ubicar ~15 mm sobre el borde inferior
         self.set_y(-15)
         y = self.get_y()
-
-        # Fuente igual a subtítulos
         subtitle_fs = 6.2
         line_h = 3.4
-
-        # Línea superior EXACTA al largo del primer texto
         first_line = self._footer_lines[0]
         self.set_font("Arial", "B", subtitle_fs)
         text_w = self.get_string_width(first_line)
@@ -39,12 +33,9 @@ class PDF(FPDF):
         self.set_draw_color(0, 0, 0)
         self.set_line_width(0.2)
         self.line(x_left, y, x_left + text_w, y)
-
-        # Texto del pie: interlineado 3.4 mm
         self.ln(1.6)
         self.set_x(self.l_margin)
         self.cell(0, line_h, first_line, ln=1, align="L")
-
         self.set_font("Arial", "", subtitle_fs)
         for line in self._footer_lines[1:]:
             self.set_x(self.l_margin)
@@ -72,7 +63,6 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
-    """Dibuja la firma en (x, y). Ajusta w_mm/h_mm si necesitas otro tamaño."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -159,9 +149,6 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     pdf.set_y(y_body + content_h)
     
 def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
-    """
-    Dibuja los instrumentos de análisis en 1 o 2 columnas (2 instrumentos por columna).
-    """
     row_h_field = 3.4
     label_w = 28.0
     text_w = col_w - label_w - 3.0
@@ -390,11 +377,11 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # --- CAMBIO DOS PUNTOS: definimos anchos para la "columna de :"
-        COLON_W = 1.8            # ancho de la celda para “:”
-        GAP_AFTER_COLON = 1.2     # pequeño espacio después de “:”
+        # >>> COLON SHIFT >>>
+        COLON_W = 1.8          # ancho del ":" (celda dedicada)
+        COLON_SHIFT = 2.8       # cuánto desplazo el ":" a la derecha (AJUSTABLE)
+        GAP_AFTER_COLON = 1.2   # espacio luego del ":"
         label_w_common = 28.0
-        gap_after_label = 1.0
 
         y_marca = pdf.get_y()
         date_col_w   = 11.0
@@ -405,17 +392,18 @@ def main():
         gap_lab_box  = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
 
-        # ------ MARCA (sin ":" pegado) + ":" en su propia celda ------
+        # ------ MARCA (con ":" desplazado) ------
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
         pdf.cell(label_w_common, line_h, "MARCA", 0, 0, "L")
-        # celda ":" separada
-        pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
-        # valor con espacio después del ":" dedicado
-        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + COLON_W + GAP_AFTER_COLON)
+        # separar con shift antes del ":"
+        pdf.cell(COLON_SHIFT, line_h, "", 0, 0)           # espacio de desplazamiento
+        pdf.cell(COLON_W, line_h, ":", 0, 0, "C")         # celda ":" dedicada
+        # ancho del valor considerando el shift y el ":"
+        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + COLON_SHIFT + COLON_W + GAP_AFTER_COLON)
         value_w_line1 = max(10, value_w_line1)
         pdf.cell(value_w_line1, line_h, f"{marca}", 0, 0, "L")
 
-        # FECHA (se mantiene con su ":" propio)
+        # FECHA
         pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
@@ -426,18 +414,15 @@ def main():
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
 
-        # Función para filas izquierdas con ":" separado
+        # Función genérica con ":" desplazado
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
-            # etiqueta SIN “:”
             pdf.cell(label_w_common, line_h, f"{lbl}", 0, 0, "L")
-            # columna dedicada para “:”
-            pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
-            # valor SIN “:”
-            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + COLON_W + GAP_AFTER_COLON)
+            pdf.cell(COLON_SHIFT, line_h, "", 0, 0)            # desplazamiento
+            pdf.cell(COLON_W, line_h, ":", 0, 0, "C")          # ":"
+            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + COLON_SHIFT + COLON_W + GAP_AFTER_COLON)
             pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
 
-        # --- Estas cuatro líneas quedan sin ":" pegado a la etiqueta ni al valor
         left_field("MODELO", modelo)
         left_field("NÚMERO DE SERIE", sn)
         left_field("NÚMERO DE INVENTARIO", inventario)
@@ -506,7 +491,6 @@ def main():
         pdf.ln(1.0)
         
         y_bottom_analisis = draw_analisis_columns(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, st.session_state.analisis_equipos)
-        
         pdf.set_y(y_bottom_analisis)
 
         # ---------- Observaciones ----------
