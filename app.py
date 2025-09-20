@@ -373,23 +373,29 @@ def main():
         content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
-        # ======= COLUMNA IZQUIERDA =======
-        line_h = 3.4
+        # ======= COLUMNA IZQUIERDA (con formato de la imagen) =======
+        line_h = 4.4
         label_w_common = 28.0
         
         y_fields_start = pdf.get_y()
+        x_label = FIRST_COL_LEFT + 2
+        x_value = FIRST_COL_LEFT + label_w_common + 2 # Ajuste de posición
 
         def left_field(lbl, val):
-            pdf.set_x(FIRST_COL_LEFT)
+            nonlocal y_fields_start
             pdf.set_font("Arial", "", 7.5)
-            pdf.cell(pdf.get_string_width(f"{lbl}"), line_h, f"{lbl}", 0, 0, "L")
+            # Dibuja la etiqueta
+            pdf.set_xy(x_label, y_fields_start)
+            pdf.cell(label_w_common, line_h, f"{lbl}", 0, 0, "L")
+            # Dibuja el valor con dos puntos
+            pdf.set_xy(x_value, y_fields_start)
             pdf.cell(0, line_h, f" : {val}", 0, 1, "L")
+            y_fields_start += line_h
 
-        left_field("Marca", marca)
-        left_field("Modelo", modelo)
-        left_field("Número de Serie", sn)
-        left_field("N/Inventario", inventario)
-        left_field("Ubicación", ubicacion)
+        left_field("EQUIPO", "Monitor/Desfibrilador") # Ejemplo para el PDF
+        left_field("MARCA", marca)
+        left_field("MODELO", modelo)
+        left_field("NÚMERO SERIE", sn)
         
         # Fecha a la derecha
         y_fields_end = pdf.get_y()
