@@ -177,13 +177,15 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         yy = y
         def field(lbl, val=""):
             nonlocal yy
-            pdf.set_xy(x, yy); pdf.set_font("Arial", "", 6.2); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}:", border=0, ln=0)
-            pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, f" {val}", border=0, ln=1)
+            pdf.set_xy(x, yy); pdf.set_font("Arial", "B", 6.2); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" {val}", border=0, ln=1)
             yy += row_h_field
+        
         field("EQUIPO",  data.get('equipo', ''))
         field("MARCA",   data.get('marca', ''))
         field("MODELO",  data.get('modelo', ''))
-        field("NÚMERO SERIE", data.get('serie', ''))
+        field("NÚMERO DE SERIE", data.get('serie', ''))
         return yy
     
     num_equipos = len(data_list)
@@ -378,6 +380,22 @@ def main():
         value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
         
         y_fields_start = pdf.get_y()
+
+        def left_field(lbl, val):
+            pdf.set_x(FIRST_COL_LEFT)
+            pdf.set_font("Arial", "B", 7.5)
+            pdf.cell(pdf.get_string_width(f"{lbl}:"), line_h, f"{lbl}:", 0, 0, "L")
+            pdf.set_font("Arial", "", 7.5)
+            pdf.cell(value_w, line_h, f" {val}", 0, 1, "L")
+        
+        left_field("Marca", marca)
+        left_field("Modelo", modelo)
+        left_field("Número de Serie", sn)
+        left_field("Número de Inventario", inventario)
+        left_field("Ubicación", ubicacion)
+        
+        # Fecha a la derecha
+        y_fields_end = pdf.get_y()
         date_col_w = 11.0
         date_table_w = date_col_w * 3
         x_date_right = FIRST_TAB_RIGHT
@@ -385,13 +403,7 @@ def main():
         fecha_label_w = 13.0
         gap_lab_box = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
-
-        pdf.set_xy(FIRST_COL_LEFT, y_fields_start)
-        pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
-        pdf.set_font("Arial", "", 7.5)
-        pdf.cell(value_w - date_table_w - fecha_label_w, line_h, f" {marca}", 0, 0, "L")
-
+        
         pdf.set_xy(x_label_fecha, y_fields_start); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
@@ -400,21 +412,8 @@ def main():
         pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
         pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
-        pdf.ln(line_h)
         
-        def left_field(lbl, val):
-            pdf.set_x(FIRST_COL_LEFT)
-            pdf.set_font("Arial", "B", 7.5)
-            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
-            pdf.set_font("Arial", "", 7.5)
-            pdf.cell(value_w, line_h, f" {val}", 0, 1, "L")
-
-        left_field("Modelo", modelo)
-        left_field("Número de Serie", sn)
-        left_field("Número de Inventario", inventario)
-        left_field("Ubicación", ubicacion)
-        
-        pdf.set_y(pdf.get_y() + 2.6)
+        pdf.set_y(y_fields_end + 2.6)
 
         LEFT_ROW_H = 3.4
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
