@@ -390,6 +390,12 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
+        # --- CAMBIO DOS PUNTOS: definimos anchos para la "columna de :"
+        COLON_W = 1.8            # ancho de la celda para “:”
+        GAP_AFTER_COLON = 1.2     # pequeño espacio después de “:”
+        label_w_common = 28.0
+        gap_after_label = 1.0
+
         y_marca = pdf.get_y()
         date_col_w   = 11.0
         date_table_w = date_col_w * 3
@@ -398,16 +404,18 @@ def main():
         fecha_label_w = 13.0
         gap_lab_box  = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
-        
-        label_w_common = 28.0
-        gap_after_label = 1.0
 
+        # ------ MARCA (sin ":" pegado) + ":" en su propia celda ------
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
         pdf.cell(label_w_common, line_h, "MARCA", 0, 0, "L")
-        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + gap_after_label)
+        # celda ":" separada
+        pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
+        # valor con espacio después del ":" dedicado
+        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + COLON_W + GAP_AFTER_COLON)
         value_w_line1 = max(10, value_w_line1)
-        pdf.cell(value_w_line1, line_h, f": {marca}", 0, 0, "L")
+        pdf.cell(value_w_line1, line_h, f"{marca}", 0, 0, "L")
 
+        # FECHA (se mantiene con su ":" propio)
         pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
@@ -418,12 +426,18 @@ def main():
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
 
+        # Función para filas izquierdas con ":" separado
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
-            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
-            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
-            pdf.cell(value_w, line_h, f": {val}", 0, 1, "L")
+            # etiqueta SIN “:”
+            pdf.cell(label_w_common, line_h, f"{lbl}", 0, 0, "L")
+            # columna dedicada para “:”
+            pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
+            # valor SIN “:”
+            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + COLON_W + GAP_AFTER_COLON)
+            pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
 
+        # --- Estas cuatro líneas quedan sin ":" pegado a la etiqueta ni al valor
         left_field("MODELO", modelo)
         left_field("NÚMERO DE SERIE", sn)
         left_field("NÚMERO DE INVENTARIO", inventario)
@@ -528,7 +542,7 @@ def main():
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción (líneas fijas; imágenes ajustables por offset) ----------
+        # ---------- Firmas de recepción ----------
         ancho_area = col_total_w
         center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
         center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
