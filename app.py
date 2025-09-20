@@ -185,7 +185,9 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
     
     # Maneja de 1 a 2 equipos
     if num_equipos == 1:
+        # Dibuja la única columna en la posición inicial (x_start)
         draw_column_no_lines(x_start, y_current, data_list[0])
+        y_current = pdf.get_y() + 2 # Actualizar y_current después de la primera columna
     elif num_equipos >= 2:
         gap_cols = 6
         col_w2 = (col_w - gap_cols) / 2.0
@@ -198,10 +200,16 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
 
     # Maneja 3 o 4 equipos, dibujando una segunda fila de columnas
     if num_equipos >= 3:
+        gap_cols = 6 # Definir de nuevo para este bloque, aunque ya existía
+        col_w2 = (col_w - gap_cols) / 2.0
+        left_x = x_start
+        right_x = x_start + col_w2 + gap_cols
+        
+        end_left_row2 = draw_column_no_lines(left_x, y_current, data_list[2])
+        end_right_row2 = 0
         if num_equipos >= 4:
-            draw_column_no_lines(right_x, y_current, data_list[3])
-        draw_column_no_lines(left_x, y_current, data_list[2])
-        y_current = pdf.get_y() + 2 # Actualizar y_current
+            end_right_row2 = draw_column_no_lines(right_x, y_current, data_list[3])
+        y_current = max(end_left_row2, end_right_row2) + 2
     
     return y_current
 
@@ -486,7 +494,6 @@ def main():
         pdf.cell(col_total_w, 4.0, f"{TAB}7. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         pdf.ln(1.0)
         
-        # Llamar a la nueva función para dibujar las columnas de análisis
         y_bottom_analisis = draw_analisis_columns(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, st.session_state.analisis_equipos)
         
         pdf.set_y(y_bottom_analisis)
