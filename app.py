@@ -122,8 +122,8 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.ln(1.6)
 
 def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
-                         head_h=4.6, fs_head=7.2, fs_body=7.0,
-                         body_line_h=3.2, padding=1.2):
+                          head_h=4.6, fs_head=7.2, fs_body=7.0,
+                          body_line_h=3.2, padding=1.2):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs_head)
@@ -148,7 +148,6 @@ def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs
     pdf.set_font("Arial", "B", head_fs)
     
     headers = ["PRUEBA", "RITMO", "AMPL", "LOAD", "ENERGY SET", "ENERGY RESULT (J)"]
-    # Aumentar las anchuras para que la tabla sea un poco más grande
     widths = [22, 18, 18, 18, 22, 28] 
     
     pdf.set_x(x_pos + indent_w)
@@ -163,8 +162,46 @@ def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs
         for j, value in enumerate(values):
             pdf.cell(widths[j], row_h, value, border=1, ln=0, align="C")
         pdf.ln(row_h)
-    # Aumentar el espacio después de la tabla
     pdf.ln(2.6)
+    
+def create_equipment_columns(pdf, x_pos, eq_data):
+    """
+    Agrega la información de un equipo en dos columnas.
+    """
+    row_h_field = 3.4
+    fs_body = 6.2
+    indent_w = 5.0
+    col_width = (pdf.w - 2 * pdf.l_margin - 5) / 2
+    
+    # Columna 1
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.set_xy(x_pos + indent_w, pdf.get_y())
+    pdf.cell(0, row_h_field, f"EQUIPO: ", border=0, ln=0)
+    pdf.set_font("Arial", "", fs_body)
+    pdf.cell(col_width - 25, row_h_field, eq_data.get('equipo', ''), border=0, ln=0)
+
+    # Columna 2
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.set_x(x_pos + indent_w + col_width)
+    pdf.cell(0, row_h_field, f"MARCA: ", border=0, ln=0)
+    pdf.set_font("Arial", "", fs_body)
+    pdf.cell(col_width - 20, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
+
+    # Columna 1
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.set_xy(x_pos + indent_w, pdf.get_y())
+    pdf.cell(0, row_h_field, f"MODELO: ", border=0, ln=0)
+    pdf.set_font("Arial", "", fs_body)
+    pdf.cell(col_width - 25, row_h_field, eq_data.get('modelo', ''), border=0, ln=0)
+
+    # Columna 2
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.set_x(x_pos + indent_w + col_width)
+    pdf.cell(0, row_h_field, f"NÚMERO SERIE: ", border=0, ln=0)
+    pdf.set_font("Arial", "", fs_body)
+    pdf.cell(col_width - 30, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
+    
+    pdf.ln(1.6)
 
 # ========= app =========
 def main():
@@ -396,45 +433,19 @@ def main():
         pdf.cell(col_total_w, 4.0, f"{TAB}5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         pdf.ln(1.0)
         
-        left_x = FIRST_COL_LEFT
-        row_h_field = 3.4
-        pdf.set_font("Arial", "", 6.2)
-        indent_w = 5.0
-
         for eq_data in st.session_state.analisis_equipos:
             if not any(eq_data.values()): continue
-            pdf.set_x(left_x + indent_w)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, row_h_field, f"EQUIPO: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, row_h_field, eq_data.get('equipo', ''), border=0, ln=1)
-
-            pdf.set_x(left_x + indent_w)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, row_h_field, f"MARCA: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
+            create_equipment_columns(pdf, FIRST_COL_LEFT, eq_data)
             
-            pdf.set_x(left_x + indent_w)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, row_h_field, f"MODELO: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, row_h_field, eq_data.get('modelo', ''), border=0, ln=1)
-            
-            pdf.set_x(left_x + indent_w)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, row_h_field, f"NÚMERO SERIE: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
-            pdf.ln(1.6)
+        pdf.set_y(pdf.get_y() + 1.0) # Asegurar el espacio después del último equipo
 
         # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
         
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                             w=col_total_w, min_h=20,
-                             title="  Observaciones", text=observaciones,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
+                              w=col_total_w, min_h=20,
+                              title="  Observaciones", text=observaciones,
+                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         y_equipo_op = pdf.get_y()
@@ -456,9 +467,9 @@ def main():
         pdf.ln(2.0)
 
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                             w=col_total_w, min_h=20,
-                             title="  Observaciones (uso interno)", text=observaciones_interno,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
+                              w=col_total_w, min_h=20,
+                              title="  Observaciones (uso interno)", text=observaciones_interno,
+                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         ancho_area = col_total_w
@@ -489,13 +500,13 @@ def main():
         x_line_right = center_right - line_len / 2.0
 
         add_signature_inline(pdf, canvas_result_ingenieria,
-                             x=center_left - sig_w/2.0 + SIG_OFF_X_LEFT,
-                             y=y_sig + SIG_OFF_Y_LEFT,
-                             w_mm=sig_w, h_mm=sig_h)
+                              x=center_left - sig_w/2.0 + SIG_OFF_X_LEFT,
+                              y=y_sig + SIG_OFF_Y_LEFT,
+                              w_mm=sig_w, h_mm=sig_h)
         add_signature_inline(pdf, canvas_result_clinico,
-                             x=center_right - sig_w/2.0 + SIG_OFF_X_RIGHT,
-                             y=y_sig + SIG_OFF_Y_RIGHT,
-                             w_mm=sig_w, h_mm=sig_h)
+                              x=center_right - sig_w/2.0 + SIG_OFF_X_RIGHT,
+                              y=y_sig + SIG_OFF_Y_RIGHT,
+                              w_mm=sig_w, h_mm=sig_h)
 
         y_line = y_sig + sig_h + 3.0
         pdf.set_draw_color(0, 0, 0)
