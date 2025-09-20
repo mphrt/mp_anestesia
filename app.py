@@ -418,6 +418,12 @@ def main():
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
 
+        def left_field(lbl, val):
+            pdf.set_x(FIRST_COL_LEFT)
+            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
+            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
+            pdf.cell(value_w, line_h, f": {val}", 0, 1, "L")
+
         left_field("MODELO", modelo)
         left_field("NÚMERO DE SERIE", sn)
         left_field("NÚMERO DE INVENTARIO", inventario)
