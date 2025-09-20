@@ -311,16 +311,16 @@ def main():
         title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
 
         try:
-            with Image.open("chrt_logo.jpg") as im:
+            with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
             logo_h = LOGO_W_MM * ratio
         except Exception:
             logo_h = LOGO_W_MM * 0.8
 
         try:
-            pdf.image("chrt_logo.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
+            pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except Exception:
-            st.warning("No se pudo cargar el logo. Deja 'chrt_logo.jpg' junto al script.")
+            st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
         pdf.set_font("Arial", "B", 7)
         title_h = 5.0
