@@ -181,7 +181,7 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
             yy += row_h_field
         
         field("EQUIPO",  data.get('equipo', ''))
-        field("MARCA",   data.get('marca', ''))
+        field("MARCA",  data.get('marca', ''))
         field("MODELO",  data.get('modelo', ''))
         field("NÚMERO SERIE", data.get('serie', ''))
         return yy
@@ -231,11 +231,13 @@ def main():
         st.subheader(title)
         respuestas = []
         for item in items:
-            col1, col2 = st.columns([5, 3])
-            with col1:
-                st.markdown(item)
-            with col2:
-                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
+            # Usar un contenedor para separar cada pregunta
+            with st.container():
+                col1, col2 = st.columns([5, 3])
+                with col1:
+                    st.markdown(item)
+                with col2:
+                    seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
             respuestas.append((item, seleccion))
         return respuestas
 
@@ -422,7 +424,7 @@ def main():
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
         
         # Medición de potencias (izquierda)
-        TAB = "  " * 2
+        TAB = "   " * 2
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
@@ -448,7 +450,7 @@ def main():
         
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=20,
-                             title="  Observaciones", text=observaciones,
+                             title="   Observaciones", text=observaciones,
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
@@ -472,7 +474,7 @@ def main():
 
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=20,
-                             title="  Observaciones (uso interno)", text=observaciones_interno,
+                             title="   Observaciones (uso interno)", text=observaciones_interno,
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
