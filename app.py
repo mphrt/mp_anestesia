@@ -1,3 +1,18 @@
+# --- bootstrap: garantizar dependencias en tiempo de ejecución ---
+import sys, subprocess
+def _ensure(mod_name, pip_name):
+    try:
+        __import__(mod_name)
+    except ModuleNotFoundError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
+
+# fpdf2 provee el módulo "fpdf"
+_ensure("fpdf", "fpdf2==2.7.9")
+_ensure("numpy", "numpy==1.26.4")
+_ensure("PIL", "Pillow==10.4.0")
+_ensure("streamlit_drawable_canvas", "streamlit-drawable-canvas==0.9.3")
+
+
 import streamlit as st
 from fpdf import FPDF
 import datetime
