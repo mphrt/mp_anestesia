@@ -138,8 +138,8 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
     pdf.ln(1.4)
 
 def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
-                         head_h=4.6, fs_head=7.2, fs_body=7.0,
-                         body_line_h=3.2, padding=1.2):
+                          head_h=4.6, fs_head=7.2, fs_body=7.0,
+                          body_line_h=3.2, padding=1.2):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs_head)
@@ -348,8 +348,9 @@ def main():
         gap_lab_box  = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
 
-        label_w_common = 17.0
-        gap_after_label = 2.0
+        # === MODIFICACIÓN CLAVE AQUI ===
+        label_w_common = 28.0  # Ancho mayor para las etiquetas
+        gap_after_label = 1.0  # Espacio menor después de la etiqueta
 
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
         pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
@@ -377,6 +378,7 @@ def main():
         left_field("Número de Serie", sn)
         left_field("Número de Inventario", inventario)
         left_field("Ubicación", ubicacion)
+        # FIN DE LA MODIFICACIÓN
 
         pdf.ln(2.6)
 
