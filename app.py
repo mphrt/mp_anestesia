@@ -164,40 +164,40 @@ def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs
         pdf.ln(row_h)
     pdf.ln(2.6)
     
-def create_equipment_columns_two_cols(pdf, x_pos, eq_data, col_width, indent_w):
+def create_equipment_columns_one_col(pdf, x_pos, eq_data, col_width, indent_w):
     """
-    Agrega la información de un equipo en un formato de dos columnas dentro de un espacio definido.
+    Agrega la información de un equipo en un formato de una sola columna.
     """
     row_h_field = 3.4
     fs_body = 6.2
     
-    y_current = pdf.get_y()
-
-    # Primera fila: EQUIPO y MARCA
+    # Campo EQUIPO
     pdf.set_font("Arial", "B", fs_body)
-    pdf.set_xy(x_pos + indent_w, y_current)
+    pdf.set_x(x_pos + indent_w)
     pdf.cell(20, row_h_field, f"EQUIPO:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width / 2 - 25, row_h_field, eq_data.get('equipo', ''), border=0, ln=0)
-    
-    pdf.set_x(x_pos + indent_w + col_width / 2)
+    pdf.cell(col_width - 25, row_h_field, eq_data.get('equipo', ''), border=0, ln=1)
+
+    # Campo MARCA
     pdf.set_font("Arial", "B", fs_body)
+    pdf.set_x(x_pos + indent_w)
     pdf.cell(15, row_h_field, f"MARCA:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width / 2 - 20, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
+    pdf.cell(col_width - 20, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
 
-    # Segunda fila: MODELO y NÚMERO SERIE
+    # Campo MODELO
     pdf.set_font("Arial", "B", fs_body)
-    pdf.set_xy(x_pos + indent_w, pdf.get_y())
+    pdf.set_x(x_pos + indent_w)
     pdf.cell(20, row_h_field, f"MODELO:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width / 2 - 25, row_h_field, eq_data.get('modelo', ''), border=0, ln=0)
-    
-    pdf.set_x(x_pos + indent_w + col_width / 2)
+    pdf.cell(col_width - 25, row_h_field, eq_data.get('modelo', ''), border=0, ln=1)
+
+    # Campo NÚMERO SERIE
     pdf.set_font("Arial", "B", fs_body)
+    pdf.set_x(x_pos + indent_w)
     pdf.cell(25, row_h_field, f"NÚMERO SERIE:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width / 2 - 30, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
+    pdf.cell(col_width - 30, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
     
     pdf.ln(1.6)
 
@@ -431,10 +431,11 @@ def main():
         pdf.cell(col_total_w, 4.0, f"{TAB}5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         pdf.ln(1.0)
         
-        # Coloca la información del punto 5 en el formato de 2 columnas.
-        for eq_data in st.session_state.analisis_equipos:
-            if not any(eq_data.values()): continue
-            create_equipment_columns_two_cols(pdf, FIRST_COL_LEFT, eq_data, col_total_w, 5.0)
+        # Solo procesa el primer equipo de la lista
+        if st.session_state.analisis_equipos:
+            first_eq = st.session_state.analisis_equipos[0]
+            if any(first_eq.values()):
+                create_equipment_columns_one_col(pdf, FIRST_COL_LEFT, first_eq, col_total_w, 5.0)
             
         pdf.set_y(pdf.get_y() + 1.0)
 
