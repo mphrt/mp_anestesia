@@ -171,12 +171,6 @@ def create_equipment_info(pdf, x_pos, y_pos, eq_data, col_width, indent_w):
     row_h_field = 3.4
     fs_body = 6.2
 
-    # Título para el bloque del equipo
-    pdf.set_font("Arial", "B", fs_body)
-    pdf.set_x(x_pos + indent_w)
-    pdf.cell(col_width - indent_w, row_h_field, "Equipo:", border=0, ln=1, align='L')
-    pdf.set_y(pdf.get_y())
-
     # Campos del equipo
     fields = [
         ("EQUIPO", eq_data.get('equipo', '')),
@@ -185,12 +179,15 @@ def create_equipment_info(pdf, x_pos, y_pos, eq_data, col_width, indent_w):
         ("NÚMERO SERIE", eq_data.get('serie', ''))
     ]
 
-    pdf.set_font("Arial", "", fs_body)
-    for title, value in fields:
-        pdf.set_x(x_pos + indent_w + 5)
-        pdf.cell(20, row_h_field, f"{title}:", border=0, ln=0, align='L')
-        pdf.cell(col_width - 25, row_h_field, value, border=0, ln=1)
-
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.set_xy(x_pos + indent_w, y_pos)
+    for i, (title, value) in enumerate(fields):
+        pdf.set_x(x_pos + indent_w)
+        pdf.cell(pdf.get_string_width(f"{title}:") + 2, row_h_field, f"{title}:", border=0, ln=0, align='L')
+        pdf.set_font("Arial", "", fs_body)
+        pdf.cell(col_width - pdf.get_string_width(f"{title}:") - 2 - indent_w, row_h_field, value, border=0, ln=1)
+        pdf.set_font("Arial", "B", fs_body)
+    
     pdf.ln(1.6)
 
 # ========= app =========
@@ -349,30 +346,19 @@ def main():
         pdf.set_y(content_y_base)
 
         # ======= COLUMNA IZQUIERDA =======
-        pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
-
-        y_marca = pdf.get_y()
-        date_col_w = 11.0
-        date_table_w = date_col_w * 3
-        x_date_right = FIRST_TAB_RIGHT
-        x_date = x_date_right - date_table_w
-        fecha_label_w = 13.0
-        gap_lab_box = 1.8
-        x_label_fecha = x_date - fecha_label_w - gap_lab_box
-
         label_w_common = 17.0
         gap_after_label = 2.0
+        value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
 
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
             pdf.set_font("Arial", "B", 7.5)
             pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
             pdf.set_font("Arial", "", 7.5)
-            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
             pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
-
-        pdf.set_xy(FIRST_COL_LEFT, y_marca)
+        
+        y_fields_start = pdf.get_y()
         left_field("Marca", marca)
         left_field("Modelo", modelo)
         left_field("Número de Serie", sn)
@@ -380,18 +366,25 @@ def main():
         left_field("Ubicación", ubicacion)
 
         # Fecha a la derecha
-        y_fecha_end = pdf.get_y()
-        y_fecha_start = y_marca + 1
-        pdf.set_xy(x_label_fecha, y_fecha_start); pdf.set_font("Arial", "B", 7.5)
+        y_fields_end = pdf.get_y()
+        date_col_w = 11.0
+        date_table_w = date_col_w * 3
+        x_date_right = FIRST_TAB_RIGHT
+        x_date = x_date_right - date_table_w
+        fecha_label_w = 13.0
+        gap_lab_box = 1.8
+        x_label_fecha = x_date - fecha_label_w - gap_lab_box
+        
+        pdf.set_xy(x_label_fecha, y_fields_start); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
         dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
-        pdf.set_xy(x_date, y_fecha_start)
+        pdf.set_xy(x_date, y_fields_start)
         pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
         pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         
-        pdf.set_y(y_fecha_end + 2.6)
+        pdf.set_y(y_fields_end + 2.6)
 
         LEFT_ROW_H = 3.4
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
@@ -428,14 +421,16 @@ def main():
         col_width_5 = col_total_w / 2 - 5
         y_start_5 = pdf.get_y()
 
+        # Columna 1
         if len(st.session_state.analisis_equipos) >= 1 and any(st.session_state.analisis_equipos[0].values()):
-            pdf.set_xy(x_left_col_5, y_start_5)
             create_equipment_info(pdf, x_pos=x_left_col_5, y_pos=y_start_5, eq_data=st.session_state.analisis_equipos[0], col_width=col_width_5, indent_w=0)
 
+        # Columna 2
         if len(st.session_state.analisis_equipos) >= 2 and any(st.session_state.analisis_equipos[1].values()):
+            y_start_2nd_col = y_start_5
             x_right_col_5 = FIRST_COL_LEFT + col_total_w / 2 + 5
-            pdf.set_xy(x_right_col_5, y_start_5)
-            create_equipment_info(pdf, x_pos=x_right_col_5, y_pos=y_start_5, eq_data=st.session_state.analisis_equipos[1], col_width=col_width_5, indent_w=0)
+            pdf.set_xy(x_right_col_5, y_start_2nd_col)
+            create_equipment_info(pdf, x_pos=x_right_col_5, y_pos=y_start_2nd_col, eq_data=st.session_state.analisis_equipos[1], col_width=col_width_5, indent_w=0)
             
         pdf.set_y(pdf.get_y() + 1.0)
 
