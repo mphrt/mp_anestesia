@@ -182,10 +182,27 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
             pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" {val}", border=0, ln=1)
             yy += row_h_field
         
-        field("EQUIPO",  data.get('equipo', ''))
-        field("MARCA",   data.get('marca', ''))
-        field("MODELO",  data.get('modelo', ''))
-        field("NÚMERO DE SERIE", data.get('serie', ''))
+        pdf.set_font("Arial", "B", 6.2)
+        pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"EQUIPO:", border=0, ln=0)
+        pdf.set_font("Arial", "", 6.2)
+        pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" {data.get('equipo', '')}", border=0, ln=1)
+        yy += row_h_field
+
+        pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"MARCA:", border=0, ln=0)
+        pdf.set_font("Arial", "", 6.2)
+        pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" {data.get('marca', '')}", border=0, ln=1)
+        yy += row_h_field
+
+        pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"MODELO:", border=0, ln=0)
+        pdf.set_font("Arial", "", 6.2)
+        pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" {data.get('modelo', '')}", border=0, ln=1)
+        yy += row_h_field
+
+        pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"NÚMERO DE SERIE:", border=0, ln=0)
+        pdf.set_font("Arial", "", 6.2)
+        pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" {data.get('serie', '')}", border=0, ln=1)
+        yy += row_h_field
+        
         return yy
     
     num_equipos = len(data_list)
@@ -377,21 +394,19 @@ def main():
         line_h = 3.4
         label_w_common = 28.0
         gap_after_label = 2.0
-        value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
         
         y_fields_start = pdf.get_y()
 
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
-            pdf.set_font("Arial", "B", 7.5)
-            pdf.cell(pdf.get_string_width(f"{lbl}:"), line_h, f"{lbl}:", 0, 0, "L")
             pdf.set_font("Arial", "", 7.5)
-            pdf.cell(value_w, line_h, f" {val}", 0, 1, "L")
+            pdf.cell(pdf.get_string_width(f"{lbl}:"), line_h, f"{lbl}:", 0, 0, "L")
+            pdf.cell(0, line_h, f" {val}", 0, 1, "L")
         
         left_field("Marca", marca)
         left_field("Modelo", modelo)
         left_field("Número de Serie", sn)
-        left_field("Número de Inventario", inventario)
+        left_field("N/Inventario", inventario)
         left_field("Ubicación", ubicacion)
         
         # Fecha a la derecha
