@@ -173,31 +173,31 @@ def create_equipment_columns(pdf, x_pos, eq_data):
     indent_w = 5.0
     col_width = (pdf.w - 2 * pdf.l_margin - 5) / 2
     
-    # Columna 1
+    y_current = pdf.get_y()
+
+    # Primera fila: EQUIPO y MARCA
     pdf.set_font("Arial", "B", fs_body)
-    pdf.set_xy(x_pos + indent_w, pdf.get_y())
-    pdf.cell(0, row_h_field, f"EQUIPO: ", border=0, ln=0)
+    pdf.set_xy(x_pos + indent_w, y_current)
+    pdf.cell(20, row_h_field, f"EQUIPO:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
     pdf.cell(col_width - 25, row_h_field, eq_data.get('equipo', ''), border=0, ln=0)
-
-    # Columna 2
-    pdf.set_font("Arial", "B", fs_body)
+    
     pdf.set_x(x_pos + indent_w + col_width)
-    pdf.cell(0, row_h_field, f"MARCA: ", border=0, ln=0)
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.cell(15, row_h_field, f"MARCA:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
     pdf.cell(col_width - 20, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
 
-    # Columna 1
+    # Segunda fila: MODELO y NÚMERO SERIE
     pdf.set_font("Arial", "B", fs_body)
     pdf.set_xy(x_pos + indent_w, pdf.get_y())
-    pdf.cell(0, row_h_field, f"MODELO: ", border=0, ln=0)
+    pdf.cell(20, row_h_field, f"MODELO:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
     pdf.cell(col_width - 25, row_h_field, eq_data.get('modelo', ''), border=0, ln=0)
-
-    # Columna 2
-    pdf.set_font("Arial", "B", fs_body)
+    
     pdf.set_x(x_pos + indent_w + col_width)
-    pdf.cell(0, row_h_field, f"NÚMERO SERIE: ", border=0, ln=0)
+    pdf.set_font("Arial", "B", fs_body)
+    pdf.cell(25, row_h_field, f"NÚMERO SERIE:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
     pdf.cell(col_width - 30, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
     
@@ -260,14 +260,14 @@ def main():
     def add_equipo():
         st.session_state.analisis_equipos.append({})
 
-    for i, _ in enumerate(st.session_state.analisis_equipos):
+    for i in range(len(st.session_state.analisis_equipos)):
         st.markdown(f"**Equipo {i+1}**")
         col_eq, col_btn = st.columns([0.9, 0.1])
         with col_eq:
-            st.session_state.analisis_equipos[i]['equipo'] = st.text_input("Equipo", key=f"equipo_{i}")
-            st.session_state.analisis_equipos[i]['marca'] = st.text_input("Marca", key=f"marca_{i}")
-            st.session_state.analisis_equipos[i]['modelo'] = st.text_input("Modelo", key=f"modelo_{i}")
-            st.session_state.analisis_equipos[i]['serie'] = st.text_input("Número de Serie", key=f"serie_{i}")
+            st.session_state.analisis_equipos[i]['equipo'] = st.text_input("EQUIPO", value=st.session_state.analisis_equipos[i].get('equipo', ''), key=f"equipo_{i}")
+            st.session_state.analisis_equipos[i]['marca'] = st.text_input("MARCA", value=st.session_state.analisis_equipos[i].get('marca', ''), key=f"marca_{i}")
+            st.session_state.analisis_equipos[i]['modelo'] = st.text_input("MODELO", value=st.session_state.analisis_equipos[i].get('modelo', ''), key=f"modelo_{i}")
+            st.session_state.analisis_equipos[i]['serie'] = st.text_input("NÚMERO SERIE", value=st.session_state.analisis_equipos[i].get('serie', ''), key=f"serie_{i}")
         if i > 0:
             with col_btn:
                 st.write("")
@@ -435,30 +435,7 @@ def main():
         
         for eq_data in st.session_state.analisis_equipos:
             if not any(eq_data.values()): continue
-            pdf.set_x(FIRST_COL_LEFT + 5.0)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, 3.4, f"EQUIPO: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, 3.4, eq_data.get('equipo', ''), border=0, ln=1)
-
-            pdf.set_x(FIRST_COL_LEFT + 5.0)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, 3.4, f"MARCA: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, 3.4, eq_data.get('marca', ''), border=0, ln=1)
-            
-            pdf.set_x(FIRST_COL_LEFT + 5.0)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, 3.4, f"MODELO: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, 3.4, eq_data.get('modelo', ''), border=0, ln=1)
-            
-            pdf.set_x(FIRST_COL_LEFT + 5.0)
-            pdf.set_font("Arial", "B", 6.2)
-            pdf.cell(0, 3.4, f"NÚMERO SERIE: ", border=0, ln=0)
-            pdf.set_font("Arial", "", 6.2)
-            pdf.cell(0, 3.4, eq_data.get('serie', ''), border=0, ln=1)
-            pdf.ln(1.6)
+            create_equipment_columns(pdf, FIRST_COL_LEFT, eq_data)
             
         pdf.set_y(pdf.get_y() + 1.0)
 
