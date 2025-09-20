@@ -104,8 +104,8 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
     pdf.set_xy(x_box_no + size + text_gap, y); pdf.cell(6, size, "NO", 0, 1)
 
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
-                         row_h=3.4, head_fs=7.2, cell_fs=6.2,
-                         indent_w=5.0, title_tab_spaces=2):
+                          row_h=3.4, head_fs=7.2, cell_fs=6.2,
+                          indent_w=5.0, title_tab_spaces=2):
     title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -138,8 +138,8 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
     pdf.ln(1.4)
 
 def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
-                         head_h=4.6, fs_head=7.2, fs_body=7.0,
-                         body_line_h=3.2, padding=1.2):
+                          head_h=4.6, fs_head=7.2, fs_body=7.0,
+                          body_line_h=3.2, padding=1.2):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs_head)
@@ -168,7 +168,6 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
     TAB = "  " * 2
     
     def draw_column_no_lines(x, y, data):
-        nonlocal yy
         yy = y
         def field(lbl, val=""):
             nonlocal yy
@@ -421,7 +420,7 @@ def main():
 
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
-            pdf.cell(label_w_common, line_h, lbl, 0, 0, "L")
+            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
             value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
             pdf.cell(value_w, line_h, f": {val}", 0, 1, "L")
 
@@ -539,6 +538,7 @@ def main():
         w_pi = pdf.get_string_width("PERSONAL INGENIERÍA CLÍNICA")
         w_pc = pdf.get_string_width("PERSONAL CLÍNICO")
         text_block_w = max(w_rc, w_pi, w_pc) + 12
+        half_w = ancho_area / 2.0
         max_line_len = half_w - 8
         line_len = min(max(text_block_w, 65), max_line_len)
 
