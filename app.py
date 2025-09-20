@@ -1,18 +1,3 @@
-# --- bootstrap: garantizar dependencias en tiempo de ejecución ---
-import sys, subprocess
-def _ensure(mod_name, pip_name):
-    try:
-        __import__(mod_name)
-    except ModuleNotFoundError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
-
-# fpdf2 provee el módulo "fpdf"
-_ensure("fpdf", "fpdf2==2.7.9")
-_ensure("numpy", "numpy==1.26.4")
-_ensure("PIL", "Pillow==10.4.0")
-_ensure("streamlit_drawable_canvas", "streamlit-drawable-canvas==0.9.3")
-
-
 import streamlit as st
 from fpdf import FPDF
 import datetime
@@ -22,7 +7,7 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# ========= Pie de página: PDF con footer =========
+# ========= Pie de página =========
 FOOTER_LINES = [
     "PAUTA MANTENIMIENTO PREVENTIVO MAQUINA ANESTESIA (Ver 2)",
     "UNIDAD DE INGENIERÍA CLÍNICA",
@@ -35,38 +20,35 @@ class PDF(FPDF):
         self._footer_lines = footer_lines or []
 
     def footer(self):
-        # Si no hay líneas de pie, no dibujar nada
         if not self._footer_lines:
             return
 
-        # Posicionar a ~15 mm del borde inferior y respetar margen izquierdo
+        # Ubicar ~15 mm sobre el borde inferior
         self.set_y(-15)
-        x_left = self.l_margin
-        y_top  = self.get_y()
+        y = self.get_y()
 
-        # Primera línea del pie: línea superior EXACTA al largo del texto
+        # Fuente igual a subtítulos
+        subtitle_fs = 6.2
+        line_h = 3.4
+
+        # Línea superior EXACTA al largo del primer texto
         first_line = self._footer_lines[0]
-        # Tamaño de letra igual a subtítulos (7.2) para medir longitud exacta
-        self.set_font("Arial", "B", 7.2)
+        self.set_font("Arial", "B", subtitle_fs)
         text_w = self.get_string_width(first_line)
-
+        x_left = self.l_margin
         self.set_draw_color(0, 0, 0)
         self.set_line_width(0.2)
-        self.line(x_left, y_top, x_left + text_w, y_top)
+        self.line(x_left, y, x_left + text_w, y)
 
-        # Imprimir texto del pie (alineado a la izquierda, respetando margen)
-        # Mantengo un pequeño espacio entre la línea y el texto
+        # Texto del pie: interlineado 3.4 mm
         self.ln(1.6)
         self.set_x(self.l_margin)
-        # Primera línea en negrita, interlineado 3.4mm
-        self.set_font("Arial", "B", 7.2)
-        self.cell(0, 3.4, first_line, ln=1, align="L")
+        self.cell(0, line_h, first_line, ln=1, align="L")
 
-        # Resto de líneas del pie con mismo tamaño de letra y mismo interlineado que subtítulos
-        self.set_font("Arial", "", 7.2)
+        self.set_font("Arial", "", subtitle_fs)
         for line in self._footer_lines[1:]:
             self.set_x(self.l_margin)
-            self.cell(0, 3.4, line, ln=1, align="L")
+            self.cell(0, line_h, line, ln=1, align="L")
 
 # ========= utilidades =========
 def _crop_signature(canvas_result):
@@ -89,7 +71,8 @@ def _crop_signature(canvas_result):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=60, h_mm=16):
+def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
+    """Dibuja la firma en (x, y). Ajusta w_mm/h_mm si necesitas otro tamaño."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -123,8 +106,7 @@ def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w
 def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
                           row_h=3.4, head_fs=7.2, cell_fs=6.2,
                           indent_w=5.0, title_tab_spaces=2):
-    # Cabecera gris con bordes en OK/NO/N/A
-    title_prefix = " " * (title_tab_spaces * 2)  # "dos tabulaciones" ~ 4 espacios
+    title_prefix = " " * (title_tab_spaces * 2)
     pdf.set_x(x_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", head_fs)
@@ -134,7 +116,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
     pdf.cell(col_w, row_h, "NO",  border=1, ln=0, align="C", fill=True)
     pdf.cell(col_w, row_h, "N/A", border=1, ln=1, align="C", fill=True)
 
-    # Filas: texto sin borde; casillas con borde
     pdf.set_font("Arial", "", cell_fs)
     for item, value in items:
         pdf.set_x(x_pos)
@@ -158,19 +139,12 @@ def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, i
 
 def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
                          head_h=4.6, fs_head=7.2, fs_body=7.0,
-                         body_line_h=3.2, padding=1.2,
-                         title_tab_spaces=0):
-    """Caja con título gris y cuerpo auto-ajustable.
-       title_tab_spaces: nº de 'tabulaciones' (cada una ~2 espacios) previas al título.
-    """
-    # Encabezado
-    title_prefix = " " * (title_tab_spaces * 2)
+                         body_line_h=3.2, padding=1.2):
     pdf.set_xy(x, y)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", fs_head)
-    pdf.cell(w, head_h, f"{title_prefix}{title}", border=1, ln=1, align="L", fill=True)
+    pdf.cell(w, head_h, title, border=1, ln=1, align="L", fill=True)
 
-    # Cuerpo
     y_body = y + head_h
     x_text = x + padding
     w_text = max(1, w - 2*padding)
@@ -200,8 +174,10 @@ def main():
         respuestas = []
         for item in items:
             col1, col2 = st.columns([5, 3])
-            with col1: st.markdown(item)
-            with col2: seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
+            with col1:
+                st.markdown(item)
+            with col2:
+                seleccion = st.radio("", ["OK", "NO", "N/A"], horizontal=True, key=item)
             respuestas.append((item, seleccion))
         return respuestas
 
@@ -256,7 +232,10 @@ def main():
     st.subheader("    7. Instrumentos de análisis")
     if 'analisis_equipos' not in st.session_state:
         st.session_state.analisis_equipos = [{}]
-    def add_equipo(): st.session_state.analisis_equipos.append({})
+
+    def add_equipo():
+        st.session_state.analisis_equipos.append({})
+
     for i, _ in enumerate(st.session_state.analisis_equipos):
         st.markdown(f"**Equipo {i+1}**")
         col_eq, col_btn = st.columns([0.9, 0.1])
@@ -283,28 +262,33 @@ def main():
     col_tecnico, col_ingenieria, col_clinico = st.columns(3)
     with col_tecnico:
         st.write("Técnico Encargado:")
-        canvas_result_tecnico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
-                                          stroke_color="#000000", background_color="#EEEEEE",
-                                          height=190, width=360, drawing_mode="freedraw",
-                                          key="canvas_tecnico")
+        canvas_result_tecnico = st_canvas(
+            fill_color="rgba(255,165,0,0.3)", stroke_width=3,
+            stroke_color="#000000", background_color="#EEEEEE",
+            height=190, width=360, drawing_mode="freedraw",
+            key="canvas_tecnico"
+        )
     with col_ingenieria:
         st.write("Ingeniería Clínica:")
-        canvas_result_ingenieria = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
-                                             stroke_color="#000000", background_color="#EEEEEE",
-                                             height=190, width=360, drawing_mode="freedraw",
-                                             key="canvas_ingenieria")
+        canvas_result_ingenieria = st_canvas(
+            fill_color="rgba(255,165,0,0.3)", stroke_width=3,
+            stroke_color="#000000", background_color="#EEEEEE",
+            height=190, width=360, drawing_mode="freedraw",
+            key="canvas_ingenieria"
+        )
     with col_clinico:
         st.write("Personal Clínico:")
-        canvas_result_clinico = st_canvas(fill_color="rgba(255, 165, 0, 0.3)", stroke_width=3,
-                                          stroke_color="#000000", background_color="#EEEEEE",
-                                          height=190, width=360, drawing_mode="freedraw",
-                                          key="canvas_clinico")
+        canvas_result_clinico = st_canvas(
+            fill_color="rgba(255,165,0,0.3)", stroke_width=3,
+            stroke_color="#000000", background_color="#EEEEEE",
+            height=190, width=360, drawing_mode="freedraw",
+            key="canvas_clinico"
+        )
 
     if st.button("Generar PDF"):
         SIDE_MARGIN = 9
         TOP_MARGIN  = 4
 
-        # Usa la clase PDF con pie de página
         pdf = PDF('L', 'mm', 'A4', footer_lines=FOOTER_LINES)
         pdf.set_margins(SIDE_MARGIN, TOP_MARGIN, SIDE_MARGIN)
         pdf.set_auto_page_break(True, margin=TOP_MARGIN + 8)
@@ -354,6 +338,7 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
+        # FECHA (3 celdas) alineada con "Marca"
         y_marca = pdf.get_y()
         date_col_w   = 11.0
         date_table_w = date_col_w * 3
@@ -451,20 +436,19 @@ def main():
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
         # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas (sin líneas) =======
+        TAB = "  " * 2  # "dos tabulaciones" visibles (espacios)
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
-        # Dos tabulaciones en el título del punto 7
-        title_prefix_7 = " " * (2 * 2)
-        pdf.cell(col_total_w, 4.0, f"{title_prefix_7}7. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
+        pdf.cell(col_total_w, 4.0, f"{TAB}7. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
 
         start_y_7 = pdf.get_y() + 1.0
         gap_cols = 6
-        col_w = (col_total_w - gap_cols) / 2.0
+        col_w2 = (col_total_w - gap_cols) / 2.0
         left_x = SECOND_COL_LEFT
-        right_x = SECOND_COL_LEFT + col_w + gap_cols
+        right_x = SECOND_COL_LEFT + col_w2 + gap_cols
         label_w = 17.0
-        text_w = col_w - label_w - 3.0
+        text_w = col_w2 - label_w - 3.0
         row_h_field = 3.4
         pdf.set_font("Arial", "", 6.2)
 
@@ -475,7 +459,7 @@ def main():
             yy = y
             def field(lbl, val=""):
                 nonlocal yy
-                pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
+                pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}:", border=0, ln=0)
                 pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
                 yy += row_h_field
             field("EQUIPO",  data.get('equipo', ''))
@@ -489,12 +473,10 @@ def main():
         pdf.set_y(max(end_left, end_right) + 2)
 
         # ---------- Observaciones ----------
-        # Dos tabulaciones en el título
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=10,
-                             title="Observaciones", text=observaciones,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2,
-                             title_tab_spaces=2)
+                             title=f"{TAB}Observaciones", text=observaciones,
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
         # ---------- Equipo Operativo + Nombre/Firma + Empresa ----------
@@ -509,23 +491,21 @@ def main():
         pdf.cell(name_box_w, 4.6, name_text, 0, 0, "L")
         pdf.cell(14, 4.6, "Firma:", 0, 0, "L")
         x_sig_tecnico = pdf.get_x()
-        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=60, h_mm=16)
-        pdf.set_y(y_nombre + 16 + 2)
+        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=65, h_mm=20)
+        pdf.set_y(y_nombre + 20 + 2)
 
         pdf.set_x(SECOND_COL_LEFT)
         pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
         pdf.ln(2.0)
 
         # ---------- Observaciones (uso interno) ----------
-        # Dos tabulaciones en el título
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=10,
-                             title="Observaciones (uso interno)", text=observaciones_interno,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2,
-                             title_tab_spaces=2)
+                             title=f"{TAB}Observaciones (uso interno)", text=observaciones_interno,
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # ---------- Firmas de recepción (líneas y textos fijos; imágenes ajustables por offset) ----------
+        # ---------- Firmas de recepción (líneas fijas; imágenes ajustables por offset) ----------
         ancho_area = col_total_w
         center_left  = SECOND_COL_LEFT + (ancho_area * 0.25)
         center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
@@ -580,9 +560,19 @@ def main():
 
         pdf.set_y(max(y_line + 7, pdf.get_y()))
 
-        output = io.BytesIO(pdf.output(dest="S").encode("latin1"))
-        st.download_button("Descargar PDF", output.getvalue(),
-                           file_name=f"MP_Anestesia_{sn}.pdf", mime="application/pdf")
+        # ---- Salida compatible con fpdf2 y pyfpdf ----
+        out = pdf.output(dest="S")  # fpdf2 -> (bytearray/bytes) ; pyfpdf -> str (latin1)
+        if isinstance(out, str):
+            out = out.encode("latin1")
+        else:
+            out = bytes(out)
+
+        st.download_button(
+            "Descargar PDF",
+            out,
+            file_name=f"MP_Anestesia_{sn}.pdf",
+            mime="application/pdf"
+        )
 
 if __name__ == "__main__":
     main()
