@@ -435,9 +435,32 @@ def main():
         
         for eq_data in st.session_state.analisis_equipos:
             if not any(eq_data.values()): continue
-            create_equipment_columns(pdf, FIRST_COL_LEFT, eq_data)
+            pdf.set_x(FIRST_COL_LEFT + 5.0)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, 3.4, f"EQUIPO: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, 3.4, eq_data.get('equipo', ''), border=0, ln=1)
+
+            pdf.set_x(FIRST_COL_LEFT + 5.0)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, 3.4, f"MARCA: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, 3.4, eq_data.get('marca', ''), border=0, ln=1)
             
-        pdf.set_y(pdf.get_y() + 1.0) # Asegurar el espacio después del último equipo
+            pdf.set_x(FIRST_COL_LEFT + 5.0)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, 3.4, f"MODELO: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, 3.4, eq_data.get('modelo', ''), border=0, ln=1)
+            
+            pdf.set_x(FIRST_COL_LEFT + 5.0)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, 3.4, f"NÚMERO SERIE: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, 3.4, eq_data.get('serie', ''), border=0, ln=1)
+            pdf.ln(1.6)
+            
+        pdf.set_y(pdf.get_y() + 1.0)
 
         # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
