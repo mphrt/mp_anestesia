@@ -348,7 +348,6 @@ def main():
         gap_lab_box  = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
 
-        # === MODIFICACIÓN CLAVE AQUI ===
         label_w_common = 28.0  # Ancho mayor para las etiquetas
         gap_after_label = 1.0  # Espacio menor después de la etiqueta
 
@@ -378,7 +377,6 @@ def main():
         left_field("Número de Serie", sn)
         left_field("Número de Inventario", inventario)
         left_field("Ubicación", ubicacion)
-        # FIN DE LA MODIFICACIÓN
 
         pdf.ln(2.6)
 
@@ -449,8 +447,11 @@ def main():
         col_w2 = (col_total_w - gap_cols) / 2.0
         left_x = SECOND_COL_LEFT
         right_x = SECOND_COL_LEFT + col_w2 + gap_cols
-        label_w = 17.0
+        
+        # === MODIFICACIÓN CLAVE AQUI ===
+        label_w = 28.0 # Ancho mayor para las etiquetas
         text_w = col_w2 - label_w - 3.0
+        
         row_h_field = 3.4
         pdf.set_font("Arial", "", 6.2)
 
@@ -473,6 +474,7 @@ def main():
         end_left = draw_column_no_lines(left_x, start_y_7, e0)
         end_right = draw_column_no_lines(right_x, start_y_7, e1)
         pdf.set_y(max(end_left, end_right) + 2)
+        # FIN DE LA MODIFICACIÓN
 
         # ---------- Observaciones ----------
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
