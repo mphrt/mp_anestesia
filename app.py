@@ -176,8 +176,8 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
         yy = y
         def field(lbl, val=""):
             nonlocal yy
-            pdf.set_xy(x, yy); pdf.set_font("Arial", "", 6.2); pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-            pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, f" {val}", border=0, ln=1)
+            pdf.set_xy(x, yy); pdf.set_font("Arial", "", 6.2); pdf.cell(label_w, row_h_field, f"{lbl}", border=0, ln=0)
+            pdf.set_xy(x + label_w, yy); pdf.cell(text_w, row_h_field, f" : {val}", border=0, ln=1)
             yy += row_h_field
         
         field("EQUIPO",  data.get('equipo', ''))
@@ -380,8 +380,8 @@ def main():
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
             pdf.set_font("Arial", "", 7.5)
-            pdf.cell(pdf.get_string_width(f"{lbl}:"), line_h, f"{lbl}:", 0, 0, "L")
-            pdf.cell(0, line_h, f" {val}", 0, 1, "L")
+            pdf.cell(pdf.get_string_width(f"{lbl}"), line_h, f"{lbl}", 0, 0, "L")
+            pdf.cell(0, line_h, f" : {val}", 0, 1, "L")
 
         left_field("Marca", marca)
         left_field("Modelo", modelo)
