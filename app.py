@@ -377,11 +377,19 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # >>> COLON SHIFT >>>
-        COLON_W = 1.8          # ancho del ":" (celda dedicada)
-        COLON_SHIFT = 2.8       # cuánto desplazo el ":" a la derecha (AJUSTABLE)
-        GAP_AFTER_COLON = 1.2   # espacio luego del ":"
-        label_w_common = 28.0
+        # >>> LABEL WIDTH AUTO + EXTRA PUSH >>>
+        # Calculamos el ancho real del texto más largo de las etiquetas
+        label_texts = ["MARCA", "MODELO", "NÚMERO DE SERIE", "NÚMERO DE INVENTARIO", "UBICACIÓN"]
+        text_widths = [pdf.get_string_width(t) for t in label_texts]
+        max_label_text_w = max(text_widths) if text_widths else 28.0
+
+        LABEL_PAD = 4.0      # padding natural junto a la etiqueta
+        EXTRA_PUSH = 8.0     # empuje extra para llevar ":" más a la derecha (ajusta a 10–12 si quieres)
+        label_w_common = max_label_text_w + LABEL_PAD + EXTRA_PUSH
+
+        COLON_W = 1.8
+        GAP_AFTER_COLON = 1.6  # un pelín más para respirar
+        # <<< LABEL WIDTH AUTO + EXTRA PUSH <<<
 
         y_marca = pdf.get_y()
         date_col_w   = 11.0
@@ -392,18 +400,19 @@ def main():
         gap_lab_box  = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
 
-        # ------ MARCA (con ":" desplazado) ------
+        # ------ MARCA (con ":" en columna fija y más a la derecha) ------
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
         pdf.cell(label_w_common, line_h, "MARCA", 0, 0, "L")
-        # separar con shift antes del ":"
-        pdf.cell(COLON_SHIFT, line_h, "", 0, 0)           # espacio de desplazamiento
-        pdf.cell(COLON_W, line_h, ":", 0, 0, "C")         # celda ":" dedicada
-        # ancho del valor considerando el shift y el ":"
-        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + COLON_SHIFT + COLON_W + GAP_AFTER_COLON)
-        value_w_line1 = max(10, value_w_line1)
+        pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
+
+        # El valor debe terminar ANTES de la fecha: respetamos un margen de seguridad
+        SAFE_GAP_BEFORE_DATE = 2.0
+        x_value_start = FIRST_COL_LEFT + label_w_common + COLON_W + GAP_AFTER_COLON
+        max_value_right = x_label_fecha - SAFE_GAP_BEFORE_DATE
+        value_w_line1 = max(10, max_value_right - x_value_start)
         pdf.cell(value_w_line1, line_h, f"{marca}", 0, 0, "L")
 
-        # FECHA
+        # FECHA (igual que antes)
         pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
@@ -414,13 +423,13 @@ def main():
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
 
-        # Función genérica con ":" desplazado
+        # Función genérica (aplica el mismo ancho de etiqueta ampliado)
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
             pdf.cell(label_w_common, line_h, f"{lbl}", 0, 0, "L")
-            pdf.cell(COLON_SHIFT, line_h, "", 0, 0)            # desplazamiento
-            pdf.cell(COLON_W, line_h, ":", 0, 0, "C")          # ":"
-            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + COLON_SHIFT + COLON_W + GAP_AFTER_COLON)
+            pdf.cell(COLON_W, line_h, ":", 0, 0, "C")
+            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + COLON_W + GAP_AFTER_COLON)
+            value_w = max(10, value_w)
             pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
 
         left_field("MODELO", modelo)
