@@ -7,9 +7,9 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 
-# ========= Footer (Pie de página) =========
+# ========= Pie de página =========
 FOOTER_LINES = [
-    "PAUTA MANTENIMIENTO PREVENTIVO MONITOR/DESFIBRILADOR (Ver 1)",
+    "PAUTA MANTENIMIENTO PREVENTIVO MONITOR/DESFIBRILADOR (Ver 2)",
     "UNIDAD DE INGENIERÍA CLÍNICA",
     "HOSPITAL REGIONAL DE TALCA",
 ]
@@ -23,15 +23,15 @@ class PDF(FPDF):
         if not self._footer_lines:
             return
 
-        # Position ~15 mm from the bottom
+        # Ubicar ~15 mm sobre el borde inferior
         self.set_y(-15)
         y = self.get_y()
 
-        # Same font as subtitles
+        # Fuente igual a subtítulos
         subtitle_fs = 6.2
         line_h = 3.4
 
-        # Top line EXACTLY the length of the first text
+        # Línea superior EXACTA al largo del primer texto
         first_line = self._footer_lines[0]
         self.set_font("Arial", "B", subtitle_fs)
         text_w = self.get_string_width(first_line)
@@ -40,7 +40,7 @@ class PDF(FPDF):
         self.set_line_width(0.2)
         self.line(x_left, y, x_left + text_w, y)
 
-        # Footer text: line spacing 3.4 mm
+        # Texto del pie: interlineado 3.4 mm
         self.ln(1.6)
         self.set_x(self.l_margin)
         self.cell(0, line_h, first_line, ln=1, align="L")
@@ -50,7 +50,7 @@ class PDF(FPDF):
             self.set_x(self.l_margin)
             self.cell(0, line_h, line, ln=1, align="L")
 
-# ========= Utilities =========
+# ========= utilidades =========
 def _crop_signature(canvas_result):
     if canvas_result.image_data is None:
         return None
@@ -72,7 +72,7 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
-    """Draws the signature at (x, y). Adjust w_mm/h_mm if a different size is needed."""
+    """Dibuja la firma en (x, y). Ajusta w_mm/h_mm si necesitas otro tamaño."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -88,7 +88,7 @@ def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
             img_w = (img.width / img.height) * img_h
         pdf_obj.image(tmp_path, x=x, y=y, w=img_w, h=img_h)
     except Exception as e:
-        st.error(f"Error adding image: {e}")
+        st.error(f"Error al añadir imagen: {e}")
 
 def draw_si_no_boxes(pdf, x, y, selected, size=4.5, gap=4, text_gap=1.5, label_w=36):
     pdf.set_font("Arial", "", 7.5)
@@ -158,7 +158,29 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     pdf.rect(x, y_body, w, content_h)
     pdf.set_y(y_body + content_h)
 
-# ========= App (Aplicación) =========
+def create_power_table(pdf, x_pos, y_pos, items, item_w, col_w, row_h=3.4, head_fs=7.2, cell_fs=6.2):
+    pdf.set_xy(x_pos, y_pos)
+    pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "B", head_fs)
+    
+    headers = ["PRUEBA", "RITMO", "AMPL", "LOAD", "ENERGY SET", "ENERGY RESULT (J)"]
+    widths = [20, 15, 15, 15, 20, 25]
+    total_w = sum(widths)
+
+    for i, header in enumerate(headers):
+        pdf.cell(widths[i], row_h, header, border=1, ln=0, align="C", fill=True)
+    pdf.ln(row_h)
+
+    pdf.set_font("Arial", "", cell_fs)
+    for i, item in enumerate(items):
+        pdf.set_x(x_pos)
+        values = [str(i + 1), "80BPM", "1,0mV", "50ohm", item[0], item[1]]
+        for j, value in enumerate(values):
+            pdf.cell(widths[j], row_h, value, border=1, ln=0, align="C")
+        pdf.ln(row_h)
+    pdf.ln(1.6)
+
+# ========= app =========
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Monitor/Desfibrilador")
 
@@ -181,34 +203,32 @@ def main():
             respuestas.append((item, seleccion))
         return respuestas
 
-    chequeo_visual = checklist("1. Chequeo Visual", [
-        "1.1. Carcasa Frontal y Trasera",
-        "1.2. Cables y Accesorios (electrodos, palas)",
-        "1.3. Batería de respaldo (condición)",
-        "1.4. Impresora",
-        "1.5. Pantalla/Monitor",
+    chequeo_visual = checklist("1. Inspección y limpieza", [
+        "1.1. Inspección general",
+        "1.2. Limpieza de contactos",
+        "1.3. Limpieza de cabezal termo-inscriptor",
+        "1.4. Revisión del estado de los accesorios",
+        "1.5. Revisión del panel",
+        "1.6. Revisión del conexiones eléctricas"
     ])
-    pruebas_funcionales = checklist("2. Pruebas Funcionales", [
-        "2.1. Autotest de Encendido",
-        "2.2. Autotest de Seguridad Eléctrica",
-        "2.3. Funcionamiento con Batería",
-        "2.4. Prueba de Monitoreo ECG",
-        "2.5. Prueba de Impresión",
-        "2.6. Prueba de Alarma de Voz",
+    seguridad_electrica = checklist("2. Seguridad eléctrica", [
+        "2.1. Medición de corrientes de fuga normal condición",
+        "2.2. Medición de corrientes de fuga con neutro abierto"
     ])
-    prueba_desfibrilacion = checklist("3. Prueba de Desfibrilación", [
-        "3.1. Prueba de Carga/Descarga (Energía 10J)",
-        "3.2. Prueba de Carga/Descarga (Energía 200J)",
-        "3.3. Prueba de Carga/Descarga (Energía 360J)",
-        "3.4. Carga y Descarga con palas o electrodos",
-        "3.5. Tiempo de carga de 0 a 200J (Máximo 10s)",
-        "3.6. Prueba de Descarga Sincronizada",
+    accesorios_equipo = checklist("3. Accesorios del equipo", [
+        "3.1. Cable de poder",
+        "3.2. Cable paciente",
+        "3.3. Cable de interfaz",
+        "3.4. Cable de tierra fuente de poder",
+        "3.5. Palas desfibriladoras"
     ])
-    seguridad_electrica = checklist("4. Seguridad Eléctrica", [
-        "4.1. Corriente de fuga (según norma)",
-        "4.2. Tierra de protección",
-        "4.3. Aislamiento",
-    ])
+
+    st.subheader("4. Medición de potencias")
+    potencias_valores = []
+    energia_set = [5, 15, 20, 50, 75, 100, 200]
+    for i, energia in enumerate(energia_set):
+        valor_medido = st.text_input(f"Energía de ajuste: {energia} J", key=f"potencia_{i}")
+        potencias_valores.append((f"{energia} J", valor_medido))
 
     st.subheader("5. Instrumentos de análisis")
     if 'analisis_equipos' not in st.session_state:
@@ -278,20 +298,21 @@ def main():
         page_w = pdf.w
         COL_GAP = 6
         FIRST_COL_LEFT = SIDE_MARGIN
-        usable_w = page_w - 2*SIDE_MARGIN
+        usable_w = page_w - 2 * SIDE_MARGIN
         col_total_w = (usable_w - COL_GAP) / 2.0
         COL_W = 12.0
         ITEM_W = max(62.0, col_total_w - 3 * COL_W)
         FIRST_TAB_RIGHT = FIRST_COL_LEFT + col_total_w
         SECOND_COL_LEFT = FIRST_TAB_RIGHT + COL_GAP
 
-        # ======= HEADER =======
+        # ======= ENCABEZADO =======
         logo_x, logo_y = 2, 2
         LOGO_W_MM = 60
         sep = 4
         title_text = "PAUTA DE MANTENIMIENTO PREVENTIVO MONITOR/DESFIBRILADOR"
 
         try:
+            # Reemplaza con la ruta a tu logo
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
             logo_h = LOGO_W_MM * ratio
@@ -301,7 +322,7 @@ def main():
         try:
             pdf.image("logo_hrt_final.jpg", x=logo_x, y=logo_y, w=LOGO_W_MM)
         except Exception:
-            st.warning("Could not load the logo. Place 'logo_hrt_final.jpg' next to the script.")
+            st.warning("No se pudo cargar el logo. Deja 'logo_hrt_final.jpg' junto al script.")
 
         pdf.set_font("Arial", "B", 7)
         title_h = 5.0
@@ -315,11 +336,11 @@ def main():
         content_y_base = header_bottom + 2
         pdf.set_y(content_y_base)
 
-        # ======= LEFT COLUMN =======
+        # ======= COLUMNA IZQUIERDA =======
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # DATE (3 cells) aligned with "Marca"
+        # FECHA (3 celdas) alineada con "Marca"
         y_marca = pdf.get_y()
         date_col_w = 11.0
         date_table_w = date_col_w * 3
@@ -362,27 +383,72 @@ def main():
         pdf.ln(2.6)
 
         LEFT_ROW_H = 3.4
-        create_checkbox_table(pdf, "1. Chequeo Visual", chequeo_visual, x_pos=FIRST_COL_LEFT,
+        create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
-        create_checkbox_table(pdf, "2. Pruebas Funcionales", pruebas_funcionales, x_pos=FIRST_COL_LEFT,
+        create_checkbox_table(pdf, "2. Seguridad eléctrica", seguridad_electrica, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
-        create_checkbox_table(pdf, "3. Prueba de Desfibrilación", prueba_desfibrilacion, x_pos=FIRST_COL_LEFT,
+        create_checkbox_table(pdf, "3. Accesorios del equipo", accesorios_equipo, x_pos=FIRST_COL_LEFT,
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
-        create_checkbox_table(pdf, "4. Seguridad Eléctrica", seguridad_electrica, x_pos=FIRST_COL_LEFT,
-                              item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
-                              head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
-
-        # Ensure the next section starts on the same y-level as the left column
+        
+        # Acomodar para que la tabla de potencias esté en la segunda columna
         pdf.set_y(content_y_base)
         
-        # ======= RIGHT COLUMN =======
-        y_pos_right_col = pdf.get_y()
-        pdf.set_y(y_pos_right_col)
+        # ======= COLUMNA DERECHA =======
+        # Observaciones
+        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                             w=col_total_w, min_h=20,
+                             title="  Observaciones", text=observaciones,
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
+        pdf.ln(2)
 
-        # ======= 5. Instruments =======
+        # Equipo Operativo + Nombre/Firma + Empresa
+        y_equipo_op = pdf.get_y()
+        draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4.5, label_w=40)
+        pdf.ln(1.6)
+
+        pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
+        y_nombre = pdf.get_y()
+        name_text = f"Nombre Técnico/Ingeniero: {tecnico}"
+        name_box_w = min(100, col_total_w * 0.58)
+        pdf.cell(name_box_w, 4.6, name_text, 0, 0, "L")
+        pdf.cell(14, 4.6, "Firma:", 0, 0, "L")
+        x_sig_tecnico = pdf.get_x()
+        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=65, h_mm=20)
+        pdf.set_y(y_nombre + 20 + 2)
+
+        pdf.set_x(SECOND_COL_LEFT)
+        pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
+        pdf.ln(2.0)
+
+        # Observaciones (uso interno)
+        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
+                             w=col_total_w, min_h=20,
+                             title="  Observaciones (uso interno)", text=observaciones_interno,
+                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
+        pdf.ln(2)
+
+        # Medición de potencias
+        # Revisa si la tabla se ajusta en la página actual o necesita una nueva
+        if pdf.get_y() + (len(potencias_valores) + 1) * 3.4 + 4 > pdf.h - 20: # Estimación de altura de tabla
+            pdf.add_page()
+            pdf.set_y(TOP_MARGIN)
+        
+        # Mueve la tabla de potencias a la columna izquierda
+        current_y = pdf.get_y()
+        pdf.set_xy(FIRST_COL_LEFT, current_y)
+        
+        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "B", 7.2)
+        pdf.cell(col_total_w, 4.0, "  4. Medición de potencias", border=1, ln=1, align="L", fill=True)
+        pdf.set_y(pdf.get_y() + 1.0)
+        
+        create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, ITEM_W, COL_W)
+
+        # Instrumentos de análisis (en la columna derecha)
+        pdf.set_y(current_y)
         TAB = "  " * 2
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
@@ -415,44 +481,12 @@ def main():
             field("NÚMERO DE SERIE", data.get('serie', ''))
             return yy
 
-        end_left = draw_column_no_lines(left_x, start_y_5, e0)
-        end_right = draw_column_no_lines(right_x, start_y_5, e1)
-        pdf.set_y(max(end_left, end_right) + 2)
+        end_left_analisis = draw_column_no_lines(left_x, start_y_5, e0)
+        end_right_analisis = draw_column_no_lines(right_x, start_y_5, e1)
+        pdf.set_y(max(end_left_analisis, end_right_analisis) + 2)
 
-        # ---------- Observations ----------
-        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                             w=col_total_w, min_h=10,
-                             title=f"{TAB}Observaciones", text=observaciones,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
-        pdf.ln(2)
-
-        # ---------- Operational Status + Name/Signature + Company ----------
-        y_equipo_op = pdf.get_y()
-        draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4.5, label_w=40)
-        pdf.ln(1.6)
-
-        pdf.set_x(SECOND_COL_LEFT); pdf.set_font("Arial", "", 7.5)
-        y_nombre = pdf.get_y()
-        name_text = f"Nombre Técnico/Ingeniero: {tecnico}"
-        name_box_w = min(100, col_total_w * 0.58)
-        pdf.cell(name_box_w, 4.6, name_text, 0, 0, "L")
-        pdf.cell(14, 4.6, "Firma:", 0, 0, "L")
-        x_sig_tecnico = pdf.get_x()
-        add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=65, h_mm=20)
-        pdf.set_y(y_nombre + 20 + 2)
-
-        pdf.set_x(SECOND_COL_LEFT)
-        pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
-        pdf.ln(2.0)
-
-        # ---------- Internal Observations ----------
-        draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
-                             w=col_total_w, min_h=10,
-                             title=f"{TAB}Observaciones (uso interno)", text=observaciones_interno,
-                             head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
-        pdf.ln(2)
-
-        # ---------- Reception Signatures ----------
+        # Firmas de recepción
+        # El código de las firmas se mantiene igual
         ancho_area = col_total_w
         center_left = SECOND_COL_LEFT + (ancho_area * 0.25)
         center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
@@ -469,7 +503,7 @@ def main():
         sig_w = min(65, line_len - 6)
         sig_h = 20
 
-        # === Manual offsets to move only the signature images ===
+        # === offsets manuales para mover solo las imágenes de firma ===
         SIG_OFF_X_LEFT = 15
         SIG_OFF_Y_LEFT = 0
         SIG_OFF_X_RIGHT = 15
@@ -507,7 +541,7 @@ def main():
 
         pdf.set_y(max(y_line + 7, pdf.get_y()))
 
-        # ---- Output compatible with fpdf2 and pyfpdf ----
+        # ---- Salida compatible con fpdf2 y pyfpdf ----
         out = pdf.output(dest="S")
         if isinstance(out, str):
             out = out.encode("latin1")
