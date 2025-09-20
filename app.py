@@ -293,9 +293,8 @@ def main():
         logo_x, logo_y = 2, 2
         LOGO_W_MM = 60
         sep = 4
-        # Título con espacios adicionales
-        title_text = "P A U T A   M A N T E N I M I E N T O   M O N I T O R / D E S F I B R I L A D O R"
-
+        title_text = "PAUTA MANTENIMIENTO MONITOR/DESFIBRILADOR"
+        
         try:
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
@@ -312,7 +311,8 @@ def main():
         title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
         title_y = (logo_y + logo_h) - title_h
-        cell_w = max(10, FIRST_TAB_RIGHT - title_x)
+        # Aumentar el ancho de la celda para que el título ocupe más espacio horizontal
+        cell_w = usable_w - (logo_x + LOGO_W_MM + sep)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y); pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
@@ -392,25 +392,37 @@ def main():
         pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, f"{TAB}5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         pdf.ln(1.0)
-
+        
         left_x = FIRST_COL_LEFT
-        label_w = 20.0
-        text_w = col_total_w - label_w - 3.0
         row_h_field = 3.4
         pdf.set_font("Arial", "", 6.2)
         indent_w = 5.0
 
         for eq_data in st.session_state.analisis_equipos:
             if not any(eq_data.values()): continue
-            def field(lbl, val=""):
-                pdf.set_x(left_x + indent_w)
-                pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
-                pdf.set_xy(left_x + indent_w + label_w + 2, pdf.get_y())
-                pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
-            field("EQUIPO", eq_data.get('equipo', ''))
-            field("MARCA", eq_data.get('marca', ''))
-            field("MODELO", eq_data.get('modelo', ''))
-            field("NÚMERO DE SERIE", eq_data.get('serie', ''))
+            pdf.set_x(left_x + indent_w)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, row_h_field, f"EQUIPO: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, row_h_field, eq_data.get('equipo', ''), border=0, ln=1)
+
+            pdf.set_x(left_x + indent_w)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, row_h_field, f"MARCA: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
+            
+            pdf.set_x(left_x + indent_w)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, row_h_field, f"MODELO: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, row_h_field, eq_data.get('modelo', ''), border=0, ln=1)
+            
+            pdf.set_x(left_x + indent_w)
+            pdf.set_font("Arial", "B", 6.2)
+            pdf.cell(0, row_h_field, f"NÚMERO SERIE: ", border=0, ln=0)
+            pdf.set_font("Arial", "", 6.2)
+            pdf.cell(0, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
             pdf.ln(1.6)
 
         # ======= COLUMNA DERECHA =======
