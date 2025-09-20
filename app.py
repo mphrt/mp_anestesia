@@ -360,7 +360,7 @@ def main():
         logo_x, logo_y = 2, 2
         LOGO_W_MM = 60
         sep = 4
-        title_text = "PAUTA DE MANTENCION DE MAQUINAS DE ANESTESIA"
+        title_text = "PAUTA MANTENCIÓN MAQUINA DE ANESTESIA"
 
         try:
             with Image.open("logo_hrt_final.jpg") as im:
@@ -402,11 +402,17 @@ def main():
         label_w_common = 28.0
         gap_after_label = 1.0
 
+        def left_field(lbl, val):
+            pdf.set_x(FIRST_COL_LEFT)
+            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
+            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
+            pdf.cell(value_w, line_h, f" {val}", 0, 1, "L")
+
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
         pdf.cell(label_w_common, line_h, "MARCA", 0, 0, "L")
         value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + gap_after_label)
         value_w_line1 = max(10, value_w_line1)
-        pdf.cell(value_w_line1, line_h, f": {marca}", 0, 0, "L")
+        pdf.cell(value_w_line1, line_h, f" {marca}", 0, 0, "L")
 
         pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
@@ -417,12 +423,6 @@ def main():
         pdf.cell(date_col_w, line_h, mm,   1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         pdf.ln(line_h)
-
-        def left_field(lbl, val):
-            pdf.set_x(FIRST_COL_LEFT)
-            pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
-            value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
-            pdf.cell(value_w, line_h, f": {val}", 0, 1, "L")
 
         left_field("MODELO", modelo)
         left_field("NÚMERO DE SERIE", sn)
