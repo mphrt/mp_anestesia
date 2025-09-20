@@ -311,8 +311,8 @@ def main():
         title_h = 5.0
         title_x = logo_x + LOGO_W_MM + sep
         title_y = (logo_y + logo_h) - title_h
-        # Aumentar el ancho de la celda para que el título ocupe más espacio horizontal
-        cell_w = usable_w - (logo_x + LOGO_W_MM + sep)
+        # Ajuste para que el ancho de la celda del título se extienda hasta el margen de la primera columna
+        cell_w = FIRST_TAB_RIGHT - title_x
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_xy(title_x, title_y); pdf.cell(cell_w, title_h, title_text, border=1, ln=1, align="C", fill=True)
 
@@ -385,8 +385,9 @@ def main():
         pdf.ln(1.0) # Espacio entre título y tabla
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, indent_w=5.0)
         
+        pdf.ln(1.6) # Espacio después de la tabla de potencias
+
         # Instrumentos de análisis (izquierda, debajo de la tabla de potencias)
-        pdf.ln(1.6) # Espacio entre tabla de potencias y nuevo título
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
