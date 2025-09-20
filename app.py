@@ -23,15 +23,12 @@ class PDF(FPDF):
         if not self._footer_lines:
             return
 
-        # Ubicar ~15 mm sobre el borde inferior
         self.set_y(-15)
         y = self.get_y()
 
-        # Fuente igual a subtítulos
         subtitle_fs = 6.2
         line_h = 3.4
 
-        # Línea superior EXACTA al largo del primer texto
         first_line = self._footer_lines[0]
         self.set_font("Arial", "B", subtitle_fs)
         text_w = self.get_string_width(first_line)
@@ -40,7 +37,6 @@ class PDF(FPDF):
         self.set_line_width(0.2)
         self.line(x_left, y, x_left + text_w, y)
 
-        # Texto del pie: interlineado 3.4 mm
         self.ln(1.6)
         self.set_x(self.l_margin)
         self.cell(0, line_h, first_line, ln=1, align="L")
@@ -72,7 +68,6 @@ def _crop_signature(canvas_result):
     return img_byte_arr
 
 def add_signature_inline(pdf_obj, canvas_result, x, y, w_mm=65, h_mm=20):
-    """Dibuja la firma en (x, y). Ajusta w_mm/h_mm si necesitas otro tamaño."""
     img_byte_arr = _crop_signature(canvas_result)
     if not img_byte_arr:
         return
@@ -158,22 +153,22 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     pdf.rect(x, y_body, w, content_h)
     pdf.set_y(y_body + content_h)
 
-def create_power_table(pdf, x_pos, y_pos, items, item_w, col_w, row_h=3.4, head_fs=7.2, cell_fs=6.2):
+def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs=6.2, indent_w=5.0):
     pdf.set_xy(x_pos, y_pos)
     pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", head_fs)
     
     headers = ["PRUEBA", "RITMO", "AMPL", "LOAD", "ENERGY SET", "ENERGY RESULT (J)"]
     widths = [20, 15, 15, 15, 20, 25]
-    total_w = sum(widths)
-
+    
+    pdf.set_x(x_pos + indent_w)
     for i, header in enumerate(headers):
         pdf.cell(widths[i], row_h, header, border=1, ln=0, align="C", fill=True)
     pdf.ln(row_h)
 
     pdf.set_font("Arial", "", cell_fs)
     for i, item in enumerate(items):
-        pdf.set_x(x_pos)
+        pdf.set_x(x_pos + indent_w)
         values = [str(i + 1), "80BPM", "1,0mV", "50ohm", item[0], item[1]]
         for j, value in enumerate(values):
             pdf.cell(widths[j], row_h, value, border=1, ln=0, align="C")
@@ -312,7 +307,6 @@ def main():
         title_text = "PAUTA DE MANTENIMIENTO PREVENTIVO MONITOR/DESFIBRILADOR"
 
         try:
-            # Reemplaza con la ruta a tu logo
             with Image.open("logo_hrt_final.jpg") as im:
                 ratio = im.height / im.width if im.width else 1.0
             logo_h = LOGO_W_MM * ratio
@@ -340,7 +334,6 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # FECHA (3 celdas) alineada con "Marca"
         y_marca = pdf.get_y()
         date_col_w = 11.0
         date_table_w = date_col_w * 3
@@ -393,18 +386,55 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
         
-        # Acomodar para que la tabla de potencias esté en la segunda columna
+        # Medición de potencias (izquierda)
+        TAB = "  " * 2
+        pdf.set_x(FIRST_COL_LEFT)
+        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(col_total_w, 4.0, f"{TAB}4. Medición de potencias", border=1, ln=1, align="L", fill=True)
+        pdf.ln(1.0) # Espacio entre título y tabla
+        create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, indent_w=5.0)
+
+        # Instrumentos de análisis (izquierda)
+        if pdf.get_y() > 180: # Si no hay espacio, añade una nueva página
+            pdf.add_page()
+            pdf.set_y(TOP_MARGIN)
+
+        pdf.set_x(FIRST_COL_LEFT)
+        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(col_total_w, 4.0, f"{TAB}5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
+        pdf.ln(1.0)
+
+        left_x = FIRST_COL_LEFT
+        label_w = 20.0
+        text_w = col_total_w - label_w - 3.0
+        row_h_field = 3.4
+        pdf.set_font("Arial", "", 6.2)
+        indent_w = 5.0
+
+        for eq_data in st.session_state.analisis_equipos:
+            if not any(eq_data.values()): continue
+            def field(lbl, val=""):
+                pdf.set_x(left_x + indent_w)
+                pdf.cell(label_w, row_h_field, f"{lbl}:", border=0, ln=0)
+                pdf.set_xy(left_x + indent_w + label_w + 2, pdf.get_y())
+                pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
+            field("EQUIPO", eq_data.get('equipo', ''))
+            field("MARCA", eq_data.get('marca', ''))
+            field("MODELO", eq_data.get('modelo', ''))
+            field("NÚMERO DE SERIE", eq_data.get('serie', ''))
+            pdf.ln(1.6)
+
+        # ======= COLUMNA DERECHA =======
         pdf.set_y(content_y_base)
         
-        # ======= COLUMNA DERECHA =======
-        # Observaciones
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=20,
                              title="  Observaciones", text=observaciones,
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # Equipo Operativo + Nombre/Firma + Empresa
         y_equipo_op = pdf.get_y()
         draw_si_no_boxes(pdf, x=SECOND_COL_LEFT, y=y_equipo_op, selected=operativo, size=4.5, label_w=40)
         pdf.ln(1.6)
@@ -423,70 +453,12 @@ def main():
         pdf.cell(0, 4.0, f"Empresa Responsable: {empresa}", 0, 1)
         pdf.ln(2.0)
 
-        # Observaciones (uso interno)
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
                              w=col_total_w, min_h=20,
                              title="  Observaciones (uso interno)", text=observaciones_interno,
                              head_h=4.6, fs_head=7.2, fs_body=7.0, body_line_h=3.2, padding=1.2)
         pdf.ln(2)
 
-        # Medición de potencias
-        # Revisa si la tabla se ajusta en la página actual o necesita una nueva
-        if pdf.get_y() + (len(potencias_valores) + 1) * 3.4 + 4 > pdf.h - 20: # Estimación de altura de tabla
-            pdf.add_page()
-            pdf.set_y(TOP_MARGIN)
-        
-        # Mueve la tabla de potencias a la columna izquierda
-        current_y = pdf.get_y()
-        pdf.set_xy(FIRST_COL_LEFT, current_y)
-        
-        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", "B", 7.2)
-        pdf.cell(col_total_w, 4.0, "  4. Medición de potencias", border=1, ln=1, align="L", fill=True)
-        pdf.set_y(pdf.get_y() + 1.0)
-        
-        create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, ITEM_W, COL_W)
-
-        # Instrumentos de análisis (en la columna derecha)
-        pdf.set_y(current_y)
-        TAB = "  " * 2
-        pdf.set_x(SECOND_COL_LEFT)
-        pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(col_total_w, 4.0, f"{TAB}5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
-
-        start_y_5 = pdf.get_y() + 1.0
-        gap_cols = 6
-        col_w2 = (col_total_w - gap_cols) / 2.0
-        left_x = SECOND_COL_LEFT
-        right_x = SECOND_COL_LEFT + col_w2 + gap_cols
-        label_w = 17.0
-        text_w = col_w2 - label_w - 3.0
-        row_h_field = 3.4
-        pdf.set_font("Arial", "", 6.2)
-
-        e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
-        e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
-
-        def draw_column_no_lines(x, y, data):
-            yy = y
-            def field(lbl, val=""):
-                nonlocal yy
-                pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}:", border=0, ln=0)
-                pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
-                yy += row_h_field
-            field("EQUIPO", data.get('equipo', ''))
-            field("MARCA", data.get('marca', ''))
-            field("MODELO", data.get('modelo', ''))
-            field("NÚMERO DE SERIE", data.get('serie', ''))
-            return yy
-
-        end_left_analisis = draw_column_no_lines(left_x, start_y_5, e0)
-        end_right_analisis = draw_column_no_lines(right_x, start_y_5, e1)
-        pdf.set_y(max(end_left_analisis, end_right_analisis) + 2)
-
-        # Firmas de recepción
-        # El código de las firmas se mantiene igual
         ancho_area = col_total_w
         center_left = SECOND_COL_LEFT + (ancho_area * 0.25)
         center_right = SECOND_COL_LEFT + (ancho_area * 0.75)
@@ -503,7 +475,6 @@ def main():
         sig_w = min(65, line_len - 6)
         sig_h = 20
 
-        # === offsets manuales para mover solo las imágenes de firma ===
         SIG_OFF_X_LEFT = 15
         SIG_OFF_Y_LEFT = 0
         SIG_OFF_X_RIGHT = 15
@@ -541,7 +512,6 @@ def main():
 
         pdf.set_y(max(y_line + 7, pdf.get_y()))
 
-        # ---- Salida compatible con fpdf2 y pyfpdf ----
         out = pdf.output(dest="S")
         if isinstance(out, str):
             out = out.encode("latin1")
