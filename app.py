@@ -157,6 +157,53 @@ def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
     content_h = max(min_h, (end_y - (y_body + padding)) + padding)
     pdf.rect(x, y_body, w, content_h)
     pdf.set_y(y_body + content_h)
+    
+def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
+    """
+    Dibuja los instrumentos de análisis en 1 o 2 columnas (2 instrumentos por columna).
+    """
+    row_h_field = 3.4
+    label_w = 28.0
+    text_w = col_w - label_w - 3.0
+    TAB = "  " * 2
+    
+    def draw_column_no_lines(x, y, data):
+        yy = y
+        def field(lbl, val=""):
+            nonlocal yy
+            pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}:", border=0, ln=0)
+            pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
+            yy += row_h_field
+        field("EQUIPO",  data.get('equipo', ''))
+        field("MARCA",   data.get('marca', ''))
+        field("MODELO",  data.get('modelo', ''))
+        field("NÚMERO DE SERIE", data.get('serie', ''))
+        return yy
+    
+    num_equipos = len(data_list)
+    y_current = y_start
+    
+    # Maneja de 1 a 2 equipos
+    if num_equipos == 1:
+        draw_column_no_lines(x_start, y_current, data_list[0])
+    elif num_equipos >= 2:
+        gap_cols = 6
+        col_w2 = (col_w - gap_cols) / 2.0
+        left_x = x_start
+        right_x = x_start + col_w2 + gap_cols
+        
+        end_left = draw_column_no_lines(left_x, y_current, data_list[0])
+        end_right = draw_column_no_lines(right_x, y_current, data_list[1])
+        y_current = max(end_left, end_right) + 2
+
+    # Maneja 3 o 4 equipos, dibujando una segunda fila de columnas
+    if num_equipos >= 3:
+        if num_equipos >= 4:
+            draw_column_no_lines(right_x, y_current, data_list[3])
+        draw_column_no_lines(left_x, y_current, data_list[2])
+        y_current = pdf.get_y() + 2 # Actualizar y_current
+    
+    return y_current
 
 # ========= app =========
 def main():
@@ -338,7 +385,6 @@ def main():
         pdf.set_font("Arial", "", 7.5)
         line_h = 3.4
 
-        # FECHA (3 celdas) alineada con "Marca"
         y_marca = pdf.get_y()
         date_col_w   = 11.0
         date_table_w = date_col_w * 3
@@ -347,9 +393,9 @@ def main():
         fecha_label_w = 13.0
         gap_lab_box  = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
-
-        label_w_common = 28.0  # Ancho mayor para las etiquetas
-        gap_after_label = 1.0  # Espacio menor después de la etiqueta
+        
+        label_w_common = 28.0
+        gap_after_label = 1.0
 
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
         pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
@@ -397,7 +443,6 @@ def main():
         vm_izq = [(it, val) for it, val in ventilador_mecanico
                   if it.startswith("5.1.") or it.startswith("5.2.") or it.startswith("5.3.")
                   or it.startswith("5.4.") or it.startswith("5.5.") or it.startswith("5.6.")]
-        # Cabecera 5
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.2)
@@ -407,7 +452,6 @@ def main():
         pdf.cell(COL_W, LEFT_ROW_H, "OK",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "NO",  border=1, ln=0, align="C", fill=True)
         pdf.cell(COL_W, LEFT_ROW_H, "N/A", border=1, ln=1, align="C", fill=True)
-        # Leyenda 5.x
         pdf.set_font("Arial", "", 6.2)
         pdf.set_x(FIRST_COL_LEFT)
         pdf.cell(5.0, LEFT_ROW_H, "", border=0, ln=0)
@@ -416,7 +460,6 @@ def main():
                  border=0, ln=1, align="L")
         create_rows_only(pdf, vm_izq, x_pos=FIRST_COL_LEFT,
                          item_w=ITEM_W, col_w=COL_W, row_h=LEFT_ROW_H, cell_fs=6.2, indent_w=5.0)
-
         pdf.ln(1.6)
 
         # ======= COLUMNA DERECHA =======
@@ -435,46 +478,18 @@ def main():
                               item_w=ITEM_W, col_w=COL_W, row_h=3.4,
                               head_fs=7.2, cell_fs=6.2, indent_w=5.0, title_tab_spaces=2)
 
-        # ======= 7. Instrumentos de análisis -> fila gris + 2 columnas (sin líneas) =======
-        TAB = "  " * 2  # "dos tabulaciones" visibles (espacios)
+        # ======= 7. Instrumentos de análisis =======
+        TAB = "  " * 2
         pdf.set_x(SECOND_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
         pdf.cell(col_total_w, 4.0, f"{TAB}7. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
-
-        start_y_7 = pdf.get_y() + 1.0
-        gap_cols = 6
-        col_w2 = (col_total_w - gap_cols) / 2.0
-        left_x = SECOND_COL_LEFT
-        right_x = SECOND_COL_LEFT + col_w2 + gap_cols
+        pdf.ln(1.0)
         
-        # === MODIFICACIÓN CLAVE AQUI ===
-        label_w = 28.0 # Ancho mayor para las etiquetas
-        text_w = col_w2 - label_w - 3.0
+        # Llamar a la nueva función para dibujar las columnas de análisis
+        y_bottom_analisis = draw_analisis_columns(pdf, SECOND_COL_LEFT, pdf.get_y(), col_total_w, st.session_state.analisis_equipos)
         
-        row_h_field = 3.4
-        pdf.set_font("Arial", "", 6.2)
-
-        e0 = st.session_state.analisis_equipos[0] if len(st.session_state.analisis_equipos) > 0 else {}
-        e1 = st.session_state.analisis_equipos[1] if len(st.session_state.analisis_equipos) > 1 else {}
-
-        def draw_column_no_lines(x, y, data):
-            yy = y
-            def field(lbl, val=""):
-                nonlocal yy
-                pdf.set_xy(x, yy); pdf.cell(label_w, row_h_field, f"{TAB}{lbl}:", border=0, ln=0)
-                pdf.set_xy(x + label_w + 2, yy); pdf.cell(text_w, row_h_field, (val or ""), border=0, ln=1)
-                yy += row_h_field
-            field("EQUIPO",  data.get('equipo', ''))
-            field("MARCA",   data.get('marca', ''))
-            field("MODELO",  data.get('modelo', ''))
-            field("NÚMERO DE SERIE", data.get('serie', ''))
-            return yy
-
-        end_left = draw_column_no_lines(left_x, start_y_7, e0)
-        end_right = draw_column_no_lines(right_x, start_y_7, e1)
-        pdf.set_y(max(end_left, end_right) + 2)
-        # FIN DE LA MODIFICACIÓN
+        pdf.set_y(y_bottom_analisis)
 
         # ---------- Observaciones ----------
         draw_boxed_text_auto(pdf, x=SECOND_COL_LEFT, y=pdf.get_y(),
@@ -526,7 +541,6 @@ def main():
         sig_w = min(65, line_len - 6)
         sig_h = 20
 
-        # === offsets manuales para mover solo las imágenes de firma ===
         SIG_OFF_X_LEFT  = 15
         SIG_OFF_Y_LEFT  = 0
         SIG_OFF_X_RIGHT = 15
@@ -564,8 +578,7 @@ def main():
 
         pdf.set_y(max(y_line + 7, pdf.get_y()))
 
-        # ---- Salida compatible con fpdf2 y pyfpdf ----
-        out = pdf.output(dest="S")  # fpdf2 -> (bytearray/bytes) ; pyfpdf -> str (latin1)
+        out = pdf.output(dest="S")
         if isinstance(out, str):
             out = out.encode("latin1")
         else:
