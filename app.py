@@ -214,12 +214,12 @@ def draw_analisis_columns(pdf, x_start, y_start, col_w, data_list):
 def main():
     st.title("Pauta de Mantenimiento Preventivo - Máquina de Anestesia")
 
-    marca = st.text_input("Marca")
-    modelo = st.text_input("Modelo")
-    sn = st.text_input("Número de Serie")
-    inventario = st.text_input("Número de Inventario")
-    fecha = st.date_input("Fecha", value=datetime.date.today())
-    ubicacion = st.text_input("Ubicación")
+    marca = st.text_input("MARCA")
+    modelo = st.text_input("MODELO")
+    sn = st.text_input("NÚMERO DE SERIE")
+    inventario = st.text_input("NÚMERO DE INVENTARIO")
+    fecha = st.date_input("FECHA", value=datetime.date.today())
+    ubicacion = st.text_input("UBICACIÓN")
 
     def checklist(title, items):
         st.subheader(title)
@@ -403,7 +403,7 @@ def main():
         gap_after_label = 1.0
 
         pdf.set_xy(FIRST_COL_LEFT, y_marca)
-        pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
+        pdf.cell(label_w_common, line_h, "MARCA:", 0, 0, "L")
         value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + gap_after_label)
         value_w_line1 = max(10, value_w_line1)
         pdf.cell(value_w_line1, line_h, f": {marca}", 0, 0, "L")
@@ -424,10 +424,10 @@ def main():
             value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
             pdf.cell(value_w, line_h, f": {val}", 0, 1, "L")
 
-        left_field("Modelo", modelo)
-        left_field("Número de Serie", sn)
-        left_field("Número de Inventario", inventario)
-        left_field("Ubicación", ubicacion)
+        left_field("MODELO", modelo)
+        left_field("NÚMERO DE SERIE", sn)
+        left_field("NÚMERO DE INVENTARIO", inventario)
+        left_field("UBICACIÓN", ubicacion)
 
         pdf.ln(2.6)
 
@@ -512,7 +512,7 @@ def main():
         name_text = f"NOMBRE TÉCNICO/INGENIERO: {tecnico}"
         name_box_w = min(100, col_total_w * 0.58)
         pdf.cell(name_box_w, 4.6, name_text, 0, 0, "L")
-        pdf.cell(14, 4.6, "Firma:", 0, 0, "L")
+        pdf.cell(14, 4.6, "FIRMA:", 0, 0, "L")
         x_sig_tecnico = pdf.get_x()
         add_signature_inline(pdf, canvas_result_tecnico, x=x_sig_tecnico, y=y_nombre, w_mm=65, h_mm=20)
         pdf.set_y(y_nombre + 20 + 2)
