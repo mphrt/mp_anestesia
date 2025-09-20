@@ -238,7 +238,7 @@ def main():
         "6.3. Aislación"
     ])
 
-    st.subheader("7. Instrumentos de análisis")
+    st.subheader("    7. Instrumentos de análisis")
     if 'analisis_equipos' not in st.session_state:
         st.session_state.analisis_equipos = [{}]
     def add_equipo(): st.session_state.analisis_equipos.append({})
@@ -258,8 +258,8 @@ def main():
                     st.experimental_rerun()
     st.button("Agregar Equipo +", on_click=add_equipo)
 
-    observaciones = st.text_area("Observaciones")
-    observaciones_interno = st.text_area("Observaciones (uso interno)")
+    observaciones = st.text_area("    Observaciones")
+    observaciones_interno = st.text_area("    Observaciones (uso interno)")
     operativo = st.radio("¿Equipo operativo?", ["SI", "NO"])
     tecnico = st.text_input("Nombre Técnico/Ingeniero")
     empresa = st.text_input("Empresa Responsable")
