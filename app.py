@@ -347,9 +347,8 @@ def main():
 
         # ======= COLUMNA IZQUIERDA =======
         line_h = 3.4
-        label_w_common = 17.0
-        gap_after_label = 2.0
-        value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
+        label_w_common = 22.0
+        value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common)
 
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
@@ -366,7 +365,7 @@ def main():
         left_field("Ubicación", ubicacion)
 
         # Fecha a la derecha
-        y_fields_end = pdf.get_y()
+        y_fecha_start = y_fields_start
         date_col_w = 11.0
         date_table_w = date_col_w * 3
         x_date_right = FIRST_TAB_RIGHT
@@ -375,16 +374,16 @@ def main():
         gap_lab_box = 1.8
         x_label_fecha = x_date - fecha_label_w - gap_lab_box
         
-        pdf.set_xy(x_label_fecha, y_fields_start); pdf.set_font("Arial", "B", 7.5)
+        pdf.set_xy(x_label_fecha, y_fecha_start); pdf.set_font("Arial", "B", 7.5)
         pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
         pdf.set_font("Arial", "", 7.5)
         dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
-        pdf.set_xy(x_date, y_fields_start)
+        pdf.set_xy(x_date, y_fecha_start)
         pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
         pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
         pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
         
-        pdf.set_y(y_fields_end + 2.6)
+        pdf.set_y(pdf.get_y() + 2.6)
 
         LEFT_ROW_H = 3.4
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
