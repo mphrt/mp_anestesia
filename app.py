@@ -121,17 +121,6 @@ def create_checkbox_table(pdf, section_title, items, x_pos, item_w, col_w,
         pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
     pdf.ln(1.6)
 
-def create_rows_only(pdf, items, x_pos, item_w, col_w, row_h=3.4, cell_fs=6.2, indent_w=5.0):
-    pdf.set_font("Arial", "", cell_fs)
-    for item, value in items:
-        pdf.set_x(x_pos)
-        pdf.cell(indent_w, row_h, "", border=0, ln=0)
-        pdf.cell(max(1, item_w - indent_w), row_h, item, border=0, ln=0, align="L")
-        pdf.cell(col_w, row_h, "X" if value == "OK" else "", border=1, ln=0, align="C")
-        pdf.cell(col_w, row_h, "X" if value == "NO" else "", border=1, ln=0, align="C")
-        pdf.cell(col_w, row_h, "X" if value == "N/A" else "", border=1, ln=1, align="C")
-    pdf.ln(1.4)
-
 def draw_boxed_text_auto(pdf, x, y, w, min_h, title, text,
                          head_h=4.6, fs_head=7.2, fs_body=7.0,
                          body_line_h=3.2, padding=1.2):
@@ -304,7 +293,8 @@ def main():
         logo_x, logo_y = 2, 2
         LOGO_W_MM = 60
         sep = 4
-        title_text = "PAUTA DE MANTENIMIENTO PREVENTIVO MONITOR/DESFIBRILADOR"
+        # Título con espacios adicionales
+        title_text = "P A U T A   M A N T E N I M I E N T O   M O N I T O R / D E S F I B R I L A D O R"
 
         try:
             with Image.open("logo_hrt_final.jpg") as im:
@@ -394,12 +384,9 @@ def main():
         pdf.cell(col_total_w, 4.0, f"{TAB}4. Medición de potencias", border=1, ln=1, align="L", fill=True)
         pdf.ln(1.0) # Espacio entre título y tabla
         create_power_table(pdf, FIRST_COL_LEFT, pdf.get_y(), potencias_valores, indent_w=5.0)
-
-        # Instrumentos de análisis (izquierda)
-        if pdf.get_y() > 180: # Si no hay espacio, añade una nueva página
-            pdf.add_page()
-            pdf.set_y(TOP_MARGIN)
-
+        
+        # Instrumentos de análisis (izquierda, debajo de la tabla de potencias)
+        pdf.ln(1.6) # Espacio entre tabla de potencias y nuevo título
         pdf.set_x(FIRST_COL_LEFT)
         pdf.set_fill_color(230, 230, 230); pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 7.5)
