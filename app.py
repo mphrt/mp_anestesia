@@ -164,41 +164,33 @@ def create_power_table(pdf, x_pos, y_pos, items, row_h=3.4, head_fs=7.2, cell_fs
         pdf.ln(row_h)
     pdf.ln(2.6)
     
-def create_equipment_columns_one_col(pdf, x_pos, eq_data, col_width, indent_w):
+def create_equipment_info(pdf, x_pos, y_pos, eq_data, col_width, indent_w):
     """
     Agrega la información de un equipo en un formato de una sola columna.
     """
     row_h_field = 3.4
     fs_body = 6.2
-    
-    # Campo EQUIPO
-    pdf.set_font("Arial", "B", fs_body)
-    pdf.set_x(x_pos + indent_w)
-    pdf.cell(20, row_h_field, f"EQUIPO:", border=0, ln=0, align='L')
-    pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width - 25, row_h_field, eq_data.get('equipo', ''), border=0, ln=1)
 
-    # Campo MARCA
+    # Título para el bloque del equipo
     pdf.set_font("Arial", "B", fs_body)
     pdf.set_x(x_pos + indent_w)
-    pdf.cell(15, row_h_field, f"MARCA:", border=0, ln=0, align='L')
-    pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width - 20, row_h_field, eq_data.get('marca', ''), border=0, ln=1)
+    pdf.cell(col_width - indent_w, row_h_field, "Equipo:", border=0, ln=1, align='L')
+    pdf.set_y(pdf.get_y())
 
-    # Campo MODELO
-    pdf.set_font("Arial", "B", fs_body)
-    pdf.set_x(x_pos + indent_w)
-    pdf.cell(20, row_h_field, f"MODELO:", border=0, ln=0, align='L')
-    pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width - 25, row_h_field, eq_data.get('modelo', ''), border=0, ln=1)
+    # Campos del equipo
+    fields = [
+        ("EQUIPO", eq_data.get('equipo', '')),
+        ("MARCA", eq_data.get('marca', '')),
+        ("MODELO", eq_data.get('modelo', '')),
+        ("NÚMERO SERIE", eq_data.get('serie', ''))
+    ]
 
-    # Campo NÚMERO SERIE
-    pdf.set_font("Arial", "B", fs_body)
-    pdf.set_x(x_pos + indent_w)
-    pdf.cell(25, row_h_field, f"NÚMERO SERIE:", border=0, ln=0, align='L')
     pdf.set_font("Arial", "", fs_body)
-    pdf.cell(col_width - 30, row_h_field, eq_data.get('serie', ''), border=0, ln=1)
-    
+    for title, value in fields:
+        pdf.set_x(x_pos + indent_w + 5)
+        pdf.cell(20, row_h_field, f"{title}:", border=0, ln=0, align='L')
+        pdf.cell(col_width - 25, row_h_field, value, border=0, ln=1)
+
     pdf.ln(1.6)
 
 # ========= app =========
@@ -372,34 +364,34 @@ def main():
         label_w_common = 17.0
         gap_after_label = 2.0
 
-        pdf.set_xy(FIRST_COL_LEFT, y_marca)
-        pdf.cell(label_w_common, line_h, "Marca:", 0, 0, "L")
-        value_w_line1 = x_label_fecha - (FIRST_COL_LEFT + label_w_common + gap_after_label)
-        value_w_line1 = max(10, value_w_line1)
-        pdf.cell(value_w_line1, line_h, f"{marca}", 0, 0, "L")
-
-        pdf.set_xy(x_label_fecha, y_marca); pdf.set_font("Arial", "B", 7.5)
-        pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
-        pdf.set_font("Arial", "", 7.5)
-        dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
-        pdf.set_xy(x_date, y_marca)
-        pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
-        pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
-        pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
-        pdf.ln(line_h)
-
         def left_field(lbl, val):
             pdf.set_x(FIRST_COL_LEFT)
+            pdf.set_font("Arial", "B", 7.5)
             pdf.cell(label_w_common, line_h, f"{lbl}:", 0, 0, "L")
+            pdf.set_font("Arial", "", 7.5)
             value_w = FIRST_TAB_RIGHT - (FIRST_COL_LEFT + label_w_common + gap_after_label)
             pdf.cell(value_w, line_h, f"{val}", 0, 1, "L")
 
+        pdf.set_xy(FIRST_COL_LEFT, y_marca)
+        left_field("Marca", marca)
         left_field("Modelo", modelo)
         left_field("Número de Serie", sn)
         left_field("Número de Inventario", inventario)
         left_field("Ubicación", ubicacion)
 
-        pdf.ln(2.6)
+        # Fecha a la derecha
+        y_fecha_end = pdf.get_y()
+        y_fecha_start = y_marca + 1
+        pdf.set_xy(x_label_fecha, y_fecha_start); pdf.set_font("Arial", "B", 7.5)
+        pdf.cell(fecha_label_w, line_h, "FECHA:", 0, 0, "R")
+        pdf.set_font("Arial", "", 7.5)
+        dd = f"{fecha.day:02d}"; mm = f"{fecha.month:02d}"; yyyy = f"{fecha.year:04d}"
+        pdf.set_xy(x_date, y_fecha_start)
+        pdf.cell(date_col_w, line_h, dd, 1, 0, "C")
+        pdf.cell(date_col_w, line_h, mm, 1, 0, "C")
+        pdf.cell(date_col_w, line_h, yyyy, 1, 0, "C")
+        
+        pdf.set_y(y_fecha_end + 2.6)
 
         LEFT_ROW_H = 3.4
         create_checkbox_table(pdf, "1. Inspección y limpieza", chequeo_visual, x_pos=FIRST_COL_LEFT,
@@ -431,11 +423,19 @@ def main():
         pdf.cell(col_total_w, 4.0, f"{TAB}5. Instrumentos de análisis", border=1, ln=1, align="L", fill=True)
         pdf.ln(1.0)
         
-        # Solo procesa el primer equipo de la lista
-        if st.session_state.analisis_equipos:
-            first_eq = st.session_state.analisis_equipos[0]
-            if any(first_eq.values()):
-                create_equipment_columns_one_col(pdf, FIRST_COL_LEFT, first_eq, col_total_w, 5.0)
+        # Lógica para mostrar 1 o 2 columnas en el punto 5
+        x_left_col_5 = FIRST_COL_LEFT + 5
+        col_width_5 = col_total_w / 2 - 5
+        y_start_5 = pdf.get_y()
+
+        if len(st.session_state.analisis_equipos) >= 1 and any(st.session_state.analisis_equipos[0].values()):
+            pdf.set_xy(x_left_col_5, y_start_5)
+            create_equipment_info(pdf, x_pos=x_left_col_5, y_pos=y_start_5, eq_data=st.session_state.analisis_equipos[0], col_width=col_width_5, indent_w=0)
+
+        if len(st.session_state.analisis_equipos) >= 2 and any(st.session_state.analisis_equipos[1].values()):
+            x_right_col_5 = FIRST_COL_LEFT + col_total_w / 2 + 5
+            pdf.set_xy(x_right_col_5, y_start_5)
+            create_equipment_info(pdf, x_pos=x_right_col_5, y_pos=y_start_5, eq_data=st.session_state.analisis_equipos[1], col_width=col_width_5, indent_w=0)
             
         pdf.set_y(pdf.get_y() + 1.0)
 
